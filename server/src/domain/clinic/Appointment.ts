@@ -1,8 +1,8 @@
-import { Entity, type EntityProps } from "../common/Entity.js";
-import { type EntityId } from "../common/id.js";
-import { AppointmentStatus } from "./AppointmentStatusEnum.js";
-import { ServiceType } from "./ServiceEnum.js";
-import { normalizeOptional, mustPositiveInt, mustValidDate, addMinutes } from "../common/validateHelper.js";
+import {Entity, type EntityProps} from "../common/Entity.js";
+import {type EntityId} from "../common/id.js";
+import {AppointmentStatus} from "./AppointmentStatusEnum.js";
+import {ServiceType} from "./ServiceEnum.js";
+import {addMinutes, mustPositiveInt, mustValidDate, normalizeOptional} from "../common/validateHelper.js";
 
 
 export interface AppointmentProps extends EntityProps {
@@ -23,6 +23,9 @@ export interface AppointmentProps extends EntityProps {
     // State
     status: AppointmentStatus;
 
+    // In Progress
+    startedAt?: Date;
+
     // If Canceled
     cancelledAt?: Date;
     cancelReason?: string;
@@ -35,30 +38,6 @@ export interface AppointmentProps extends EntityProps {
 }
 
 
-// FOR JSON TESTING
-
-export type AppointmentSnapshot = {
-    id: EntityId;
-    createdAt: string; // ISO
-    updatedAt: string; // ISO
-    patientId: EntityId;
-    createdByUserId: EntityId;
-    serviceType: ServiceType;
-    status: AppointmentStatus;
-
-    requestedStartAt: string | undefined; // ISO
-    requestedEndAt: string | undefined;
-    notes: string | undefined;
-    physicianId: EntityId | undefined;
-    scheduledStartAt: string | undefined; // ISO
-    scheduledDurationMinutes: number | undefined;
-    cancelledAt: string | undefined;
-    cancelReason: string | undefined;
-    noShowAt: string | undefined;
-    completedAt: string | undefined;
-};
-
-
 export class Appointment extends Entity {
     private _patientId: EntityId;
     private _createdByUserId: EntityId;
@@ -69,6 +48,7 @@ export class Appointment extends Entity {
     private _physicianId: EntityId | undefined;
     private _scheduledStartAt: Date | undefined;
     private _scheduledDurationMinutes: number | undefined;
+    private _startedAt: Date | undefined;
     private _status: AppointmentStatus;
     private _cancelledAt: Date | undefined;
     private _cancelReason: string | undefined;
@@ -87,37 +67,13 @@ export class Appointment extends Entity {
         this._physicianId = props.physicianId;
         this._scheduledStartAt = props.scheduledStartAt ? mustValidDate("scheduledStartAt", props.scheduledStartAt) : undefined;
         this._scheduledDurationMinutes = props.scheduledDurationMinutes;
+        this._startedAt = props.startedAt ? mustValidDate("startedAt", props.startedAt) : undefined;
         this._status = props.status;
         this._cancelledAt = props.cancelledAt ? mustValidDate("cancelledAt", props.cancelledAt) : undefined;
         this._cancelReason = normalizeOptional(props.cancelReason);
         this._noShowAt = props.noShowAt ? mustValidDate("noShowAt", props.noShowAt) : undefined;
         this._completedAt = props.completedAt ? mustValidDate("completedAt", props.completedAt) : undefined;
         this.assertInvariants();
-    }
-
-    // JSON REHYDRATE
-    public static rehydrate(snapshot: AppointmentSnapshot): Appointment {
-        const props: AppointmentProps = {
-            id: snapshot.id,
-            createdAt: mustValidDate("createdAt", new Date(snapshot.createdAt)),
-            updatedAt: mustValidDate("updatedAt", new Date(snapshot.updatedAt)),
-            patientId: snapshot.patientId,
-            createdByUserId: snapshot.createdByUserId,
-            serviceType: snapshot.serviceType,
-            status: snapshot.status,
-        };
-
-        if (snapshot.requestedStartAt) props.requestedStartAt = mustValidDate("requestedStartAt", new Date(snapshot.requestedStartAt));
-        if (snapshot.requestedEndAt) props.requestedEndAt = mustValidDate("requestedEndAt", new Date(snapshot.requestedEndAt));
-        if (snapshot.notes) props.notes = snapshot.notes;
-        if (snapshot.physicianId) props.physicianId = snapshot.physicianId;
-        if (snapshot.scheduledStartAt) props.scheduledStartAt = new Date(snapshot.scheduledStartAt);
-        if (snapshot.scheduledDurationMinutes != null) props.scheduledDurationMinutes = snapshot.scheduledDurationMinutes;
-        if (snapshot.cancelledAt) props.cancelledAt = new Date(snapshot.cancelledAt);
-        if (snapshot.cancelReason) props.cancelReason = snapshot.cancelReason;
-        if (snapshot.noShowAt) props.noShowAt = new Date(snapshot.noShowAt);
-        if (snapshot.completedAt) props.completedAt = new Date(snapshot.completedAt);
-        return new Appointment(props);
     }
 
 
@@ -178,6 +134,10 @@ export class Appointment extends Entity {
         return this._noShowAt;
     }
 
+    get startedAt(): Date | undefined {
+        return this._startedAt;
+    }
+
     get completedAt(): Date | undefined {
         return this._completedAt;
     }
@@ -201,6 +161,14 @@ export class Appointment extends Entity {
             if (!this._scheduledStartAt) throw new Error("SCHEDULED appointment must have scheduledStartAt.");
             if (this._scheduledDurationMinutes == null) throw new Error("SCHEDULED appointment must have scheduledDurationMinutes.");
             mustPositiveInt("scheduledDurationMinutes", this._scheduledDurationMinutes);
+        }
+
+        if (this._status === AppointmentStatus.IN_PROGRESS) {
+            if (!this._physicianId) throw new Error("IN_PROGRESS appointment must have physicianId.");
+            if (!this._scheduledStartAt) throw new Error("IN_PROGRESS appointment must have scheduledStartAt.");
+            if (this._scheduledDurationMinutes == null) throw new Error("IN_PROGRESS appointment must have scheduledDurationMinutes.");
+            mustPositiveInt("scheduledDurationMinutes", this._scheduledDurationMinutes);
+            if (!this._startedAt) throw new Error("IN_PROGRESS appointment must include startedAt.");
         }
 
         if (this._status === AppointmentStatus.CANCELLED && !this._cancelledAt) {
@@ -230,29 +198,66 @@ export class Appointment extends Entity {
 
 
     //Actions
-
     public requestAppointment(){
-
+        this._status = AppointmentStatus.REQUESTED;
     }
 
-    public scheduleAppointment() {
-
+    public scheduleAppointment(input: {
+            physicianId: EntityId;
+            scheduledStartAt: Date;
+            durationMinutes: number;
+            serviceType: ServiceType;
+    }): void {
+        this.ensureIsActiveAppointment("schedule");
+        this._physicianId = input.physicianId;
+        this._scheduledStartAt = mustValidDate("scheduledStartAt", input.scheduledStartAt);
+        this._scheduledDurationMinutes = mustPositiveInt("durationMinutes", input.durationMinutes);
+        this._status = AppointmentStatus.SCHEDULED;
+        this._serviceType = input.serviceType;
+        this.touch();
+        this.assertInvariants();
     }
 
-    public requestReschedule() {
-
+    public cancelAppointment(reason?: string, at: Date = new Date()): void {
+        this.ensureIsActiveAppointment("cancel");
+        this._status = AppointmentStatus.CANCELLED;
+        this._cancelledAt = mustValidDate("cancelledAt", at);
+        this._cancelReason = normalizeOptional(reason);
+        this.touch(at);
+        this.assertInvariants();
     }
 
-    public cancelAppointment() {
-
+    public markNoShow(at: Date = new Date()): void {
+        this.ensureIsActiveAppointment("markNoShow");
+        if (this._status !== AppointmentStatus.SCHEDULED) {
+            throw new Error("Only SCHEDULED appointments can be marked as NO_SHOW.");
+        }
+        this._status = AppointmentStatus.NO_SHOW;
+        this._noShowAt = mustValidDate("noShowAt", at);
+        this.touch(at);
+        this.assertInvariants();
     }
 
-    public markNoShow() {
-
+    public markInProgress(at: Date = new Date()): void{
+        this.ensureIsActiveAppointment("markInProgress");
+        if (this._status !== AppointmentStatus.SCHEDULED) {
+            throw new Error("Only SCHEDULED appointments can be marked as IN_PROGRESS.");
+        }
+        this._startedAt = mustValidDate("startedAt", at)
+        this._status = AppointmentStatus.IN_PROGRESS;
+        this.touch(at);
+        this.assertInvariants();
     }
 
-    public completedAppointment() {
-
+    public completeAppointment(at: Date = new Date()): void {
+        this.ensureIsActiveAppointment("complete");
+        if (this._status !== AppointmentStatus.IN_PROGRESS) {
+            throw new Error("Only IN_PROGRESS appointments can be marked as COMPLETED.");
+        }
+        this._status = AppointmentStatus.COMPLETED;
+        this._completedAt = mustValidDate("completedAt", at);
+        this.touch(at);
+        this.assertInvariants();
     }
 
     private ensureIsActiveAppointment(action: string): void {
