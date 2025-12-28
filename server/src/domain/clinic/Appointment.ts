@@ -37,25 +37,25 @@ export interface AppointmentProps extends EntityProps {
 
 // FOR JSON TESTING
 
-export type AppointmentSnapshot = Required<EntityProps> & {
+export type AppointmentSnapshot = {
     id: EntityId;
     createdAt: string; // ISO
     updatedAt: string; // ISO
     patientId: EntityId;
     createdByUserId: EntityId;
     serviceType: ServiceType;
-
-    requestedStartAt?: string; // ISO
-    requestedEndAt?: string;
-    notes?: string;
-    physicianId?: EntityId;
-    scheduledStartAt?: string; // ISO
-    scheduledDurationMinutes?: number;
     status: AppointmentStatus;
-    cancelledAt?: string;
-    cancelReason?: string;
-    noShowAt?: string;
-    completedAt?: string;
+
+    requestedStartAt: string | undefined; // ISO
+    requestedEndAt: string | undefined;
+    notes: string | undefined;
+    physicianId: EntityId | undefined;
+    scheduledStartAt: string | undefined; // ISO
+    scheduledDurationMinutes: number | undefined;
+    cancelledAt: string | undefined;
+    cancelReason: string | undefined;
+    noShowAt: string | undefined;
+    completedAt: string | undefined;
 };
 
 
@@ -107,8 +107,8 @@ export class Appointment extends Entity {
             status: snapshot.status,
         };
 
-        if (snapshot.requestedStartAt) props.requestedStartAt = new Date(snapshot.requestedStartAt);
-        if (snapshot.requestedEndAt) props.requestedEndAt = new Date(snapshot.requestedEndAt);
+        if (snapshot.requestedStartAt) props.requestedStartAt = mustValidDate("requestedStartAt", new Date(snapshot.requestedStartAt));
+        if (snapshot.requestedEndAt) props.requestedEndAt = mustValidDate("requestedEndAt", new Date(snapshot.requestedEndAt));
         if (snapshot.notes) props.notes = snapshot.notes;
         if (snapshot.physicianId) props.physicianId = snapshot.physicianId;
         if (snapshot.scheduledStartAt) props.scheduledStartAt = new Date(snapshot.scheduledStartAt);
@@ -158,7 +158,7 @@ export class Appointment extends Entity {
     }
 
     get scheduledEndAt(): Date | undefined {
-        if (!this._scheduledStartAt || !this._scheduledDurationMinutes) return undefined;
+        if (!this._scheduledStartAt || this._scheduledDurationMinutes == undefined) return undefined;
         return addMinutes(this._scheduledStartAt, this._scheduledDurationMinutes);
     }
 
@@ -184,6 +184,12 @@ export class Appointment extends Entity {
 
     private assertInvariants(): void {
 
+        if (this._requestedStartAt && this._requestedEndAt) {
+            if (this._requestedEndAt <= this._requestedStartAt) {
+                throw new Error("requestedEndAt must be after requestedStartAt.");
+            }
+        }
+
         if (this._status === AppointmentStatus.REQUESTED) {
             if (this._physicianId || this._scheduledStartAt || this._scheduledDurationMinutes != null) {
                 throw new Error("REQUESTED appointment cannot include confirmed schedule fields.");
@@ -201,12 +207,61 @@ export class Appointment extends Entity {
             throw new Error("CANCELLED appointment must include cancelledAt.");
         }
 
+        if (this._status !== AppointmentStatus.CANCELLED && this._cancelledAt) {
+            throw new Error("cancelledAt can only exist when status is CANCELLED.");
+        }
+
         if (this._status === AppointmentStatus.NO_SHOW && !this._noShowAt) {
             throw new Error("NO_SHOW appointment must include noShowAt.");
         }
 
+        if (this._status !== AppointmentStatus.NO_SHOW && this._noShowAt) {
+            throw new Error("noShowAt can only exist when status is NO_SHOW.");
+        }
+
         if (this._status === AppointmentStatus.COMPLETED && !this._completedAt) {
             throw new Error("COMPLETED appointment must include completedAt.");
+        }
+
+        if (this._status !== AppointmentStatus.COMPLETED && this._completedAt) {
+            throw new Error("completedAt can only exist when status is COMPLETED.");
+        }
+    }
+
+
+    //Actions
+
+    public requestAppointment(){
+
+    }
+
+    public scheduleAppointment() {
+
+    }
+
+    public requestReschedule() {
+
+    }
+
+    public cancelAppointment() {
+
+    }
+
+    public markNoShow() {
+
+    }
+
+    public completedAppointment() {
+
+    }
+
+    private ensureIsActiveAppointment(action: string): void {
+        if (
+            this._status === AppointmentStatus.CANCELLED ||
+            this._status === AppointmentStatus.NO_SHOW ||
+            this._status === AppointmentStatus.COMPLETED
+        ) {
+            throw new Error(`Cannot ${action}: appointment is ${this._status}.`);
         }
     }
 }
