@@ -27,3 +27,14 @@ export function addMinutes(start: Date, minutes: number): Date {
     return new Date(start.getTime() + minutes * 60_000);
 }
 
+export function assertDateOrder(
+    earlier: Date | undefined,
+    later: Date | undefined,
+    onFailure: (message: string) => never,
+    message: string
+): void {
+    if (earlier && later && later < earlier) {
+        onFailure(message);
+    }
+}
+

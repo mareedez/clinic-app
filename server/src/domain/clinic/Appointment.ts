@@ -2,52 +2,43 @@ import {Entity, type EntityProps} from "../common/Entity.js";
 import {type EntityId} from "../common/id.js";
 import {AppointmentStatus} from "./AppointmentStatusEnum.js";
 import {ServiceType} from "./ServiceEnum.js";
-import {addMinutes, mustPositiveInt, mustValidDate, normalizeOptional} from "../common/validateHelper.js";
+import {addMinutes, assertDateOrder, mustPositiveInt, normalizeOptional, mustValidDate} from "../common/validateHelper.js";
 
+export class AppointmentDomainError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "AppointmentDomainError";
+    }
+}
 
 export interface AppointmentProps extends EntityProps {
     patientId: EntityId;
     createdByUserId: EntityId;
     serviceType: ServiceType;
 
-    // Self-Appointment
-    requestedStartAt?: Date;
-    requestedEndAt?: Date;
-    notes?: string;
-
-    // After Assignment
+    // Scheduled
     physicianId?: EntityId;
     scheduledStartAt?: Date;
     scheduledDurationMinutes?: number;
-
-    // State
+    notes?: string;
     status: AppointmentStatus;
-
-    // In Progress
+    checkedInAt?: Date;
     startedAt?: Date;
-
-    // If Canceled
     cancelledAt?: Date;
     cancelReason?: string;
-
-    // If no-Show
     noShowAt?: Date;
-
-    // Once Completed Successfully
     completedAt?: Date;
 }
-
 
 export class Appointment extends Entity {
     private _patientId: EntityId;
     private _createdByUserId: EntityId;
     private _serviceType: ServiceType;
-    private _requestedStartAt: Date | undefined;
-    private _requestedEndAt: Date | undefined;
     private _notes: string | undefined;
     private _physicianId: EntityId | undefined;
     private _scheduledStartAt: Date | undefined;
     private _scheduledDurationMinutes: number | undefined;
+    private _checkedInAt: Date | undefined;
     private _startedAt: Date | undefined;
     private _status: AppointmentStatus;
     private _cancelledAt: Date | undefined;
@@ -57,216 +48,159 @@ export class Appointment extends Entity {
 
     private constructor(props: AppointmentProps) {
         super(props);
-
         this._patientId = props.patientId;
         this._createdByUserId = props.createdByUserId;
         this._serviceType = props.serviceType;
-        this._requestedStartAt = props.requestedStartAt ? mustValidDate("requestedStartAt", props.requestedStartAt) : undefined;
-        this._requestedEndAt = props.requestedEndAt ? mustValidDate("requestedEndAt", props.requestedEndAt) : undefined;
         this._notes = normalizeOptional(props.notes);
         this._physicianId = props.physicianId;
-        this._scheduledStartAt = props.scheduledStartAt ? mustValidDate("scheduledStartAt", props.scheduledStartAt) : undefined;
-        this._scheduledDurationMinutes = props.scheduledDurationMinutes;
-        this._startedAt = props.startedAt ? mustValidDate("startedAt", props.startedAt) : undefined;
+        this._scheduledStartAt = props.scheduledStartAt; 
+        this._scheduledDurationMinutes = props.scheduledDurationMinutes !== undefined 
+            ? mustPositiveInt("scheduledDurationMinutes", props.scheduledDurationMinutes) 
+            : undefined;
+        this._checkedInAt = props.checkedInAt;
+        this._startedAt = props.startedAt;
         this._status = props.status;
-        this._cancelledAt = props.cancelledAt ? mustValidDate("cancelledAt", props.cancelledAt) : undefined;
+        this._cancelledAt = props.cancelledAt;
         this._cancelReason = normalizeOptional(props.cancelReason);
-        this._noShowAt = props.noShowAt ? mustValidDate("noShowAt", props.noShowAt) : undefined;
-        this._completedAt = props.completedAt ? mustValidDate("completedAt", props.completedAt) : undefined;
+        this._noShowAt = props.noShowAt;
+        this._completedAt = props.completedAt;
         this.assertInvariants();
     }
 
-
-    get patientId(): EntityId {
-        return this._patientId;
+    public static reconstitute(props: AppointmentProps): Appointment {
+        return new Appointment(props);
     }
 
-    get createdByUserId(): EntityId {
-        return this._createdByUserId;
+    public static createScheduled(input: Omit<
+        AppointmentProps,
+        | "status"
+        | "checkedInAt"
+        | "startedAt"
+        | "cancelledAt"
+        | "cancelReason"
+        | "noShowAt"
+        | "completedAt"
+    > & {
+        physicianId: EntityId;
+        scheduledStartAt: Date;
+        scheduledDurationMinutes: number;
+    }): Appointment {
+        return new Appointment({
+            ...input,
+            status: AppointmentStatus.SCHEDULED,
+        });
     }
 
-    get serviceType(): ServiceType {
-        return this._serviceType;
+    private throwInconsistent(message: string): never {
+        throw new AppointmentDomainError(message);
     }
 
-    get requestedStartAt(): Date | undefined {
-        return this._requestedStartAt;
-    }
+    // Getters
 
-    get requestedEndAt(): Date | undefined {
-        return this._requestedEndAt;
-    }
-
-    get notes(): string | undefined {
-        return this._notes;
-    }
-
-    get physicianId(): EntityId | undefined {
-        return this._physicianId;
-    }
-
-    get scheduledStartAt(): Date | undefined {
-        return this._scheduledStartAt;
-    }
-
-    get scheduledDurationMinutes(): number | undefined {
-        return this._scheduledDurationMinutes;
-    }
+    get patientId(): EntityId { return this._patientId; }
+    get createdByUserId(): EntityId { return this._createdByUserId; }
+    get serviceType(): ServiceType { return this._serviceType; }
+    get notes(): string | undefined { return this._notes; }
+    get physicianId(): EntityId | undefined { return this._physicianId; }
+    get scheduledStartAt(): Date | undefined { return this._scheduledStartAt; }
+    get scheduledDurationMinutes(): number | undefined { return this._scheduledDurationMinutes; }
+    get status(): AppointmentStatus { return this._status; }
+    get checkedInAt(): Date | undefined { return this._checkedInAt; }
+    get startedAt(): Date | undefined { return this._startedAt; }
+    get cancelledAt(): Date | undefined { return this._cancelledAt; }
+    get cancelReason(): string | undefined { return this._cancelReason; }
+    get noShowAt(): Date | undefined { return this._noShowAt; }
+    get completedAt(): Date | undefined { return this._completedAt; }
 
     get scheduledEndAt(): Date | undefined {
-        if (!this._scheduledStartAt || this._scheduledDurationMinutes == undefined) return undefined;
+        if (!this._scheduledStartAt || this._scheduledDurationMinutes === undefined) return undefined;
         return addMinutes(this._scheduledStartAt, this._scheduledDurationMinutes);
     }
 
-    get status(): AppointmentStatus {
-        return this._status;
-    }
-
-    get cancelledAt(): Date | undefined {
-        return this._cancelledAt;
-    }
-
-    get cancelReason(): string | undefined {
-        return this._cancelReason;
-    }
-
-    get noShowAt(): Date | undefined {
-        return this._noShowAt;
-    }
-
-    get startedAt(): Date | undefined {
-        return this._startedAt;
-    }
-
-    get completedAt(): Date | undefined {
-        return this._completedAt;
-    }
+    // Error handling
 
     private assertInvariants(): void {
-
-        if (this._requestedStartAt && this._requestedEndAt) {
-            if (this._requestedEndAt <= this._requestedStartAt) {
-                throw new Error("requestedEndAt must be after requestedStartAt.");
+        const status = this._status;
+        const check = (condition: boolean, value: any, label: string) => {
+            if (condition) {
+                if (!value) this.throwInconsistent(`${label} is required for status ${status}.`);
+                mustValidDate(label, value);
+            } else if (value !== undefined) {
+                this.throwInconsistent(`${label} cannot exist for status ${status}.`);
             }
-        }
+        };
 
-        if (this._status === AppointmentStatus.REQUESTED) {
-            if (this._physicianId || this._scheduledStartAt || this._scheduledDurationMinutes != null) {
-                throw new Error("REQUESTED appointment cannot include confirmed schedule fields.");
-            }
-        }
+        if (!this._physicianId) this.throwInconsistent("Physician is required.");
+        check(true, this._scheduledStartAt, "scheduledStartAt");
+        if (this._scheduledDurationMinutes === undefined) this.throwInconsistent("Duration is required.");
+        const isCheckedIn = [AppointmentStatus.CHECKED_IN, AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED].includes(status);
+        const isStarted = [AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED].includes(status);
+        const isCompleted = status === AppointmentStatus.COMPLETED;
+        const isCancelled = status === AppointmentStatus.CANCELLED;
+        check(isCheckedIn, this._checkedInAt, "checkedInAt");
+        check(isStarted, this._startedAt, "startedAt");
+        check(isCompleted, this._completedAt, "completedAt");
+        check(status === AppointmentStatus.CANCELLED, this._cancelledAt, "cancelledAt");
+        check(isCancelled, this._cancelReason, "cancelReason");
+        check(status === AppointmentStatus.NO_SHOW, this._noShowAt, "noShowAt");
+        assertDateOrder(this._checkedInAt, this._startedAt, this.throwInconsistent.bind(this), "Start time cannot be before check-in.");
+        assertDateOrder(this._startedAt, this._completedAt, this.throwInconsistent.bind(this), "Completion time cannot be before start.");
+    }
 
-        if (this._status === AppointmentStatus.SCHEDULED) {
-            if (!this._physicianId) throw new Error("SCHEDULED appointment must have physicianId.");
-            if (!this._scheduledStartAt) throw new Error("SCHEDULED appointment must have scheduledStartAt.");
-            if (this._scheduledDurationMinutes == null) throw new Error("SCHEDULED appointment must have scheduledDurationMinutes.");
-            mustPositiveInt("scheduledDurationMinutes", this._scheduledDurationMinutes);
-        }
+    // Methods
 
-        if (this._status === AppointmentStatus.IN_PROGRESS) {
-            if (!this._physicianId) throw new Error("IN_PROGRESS appointment must have physicianId.");
-            if (!this._scheduledStartAt) throw new Error("IN_PROGRESS appointment must have scheduledStartAt.");
-            if (this._scheduledDurationMinutes == null) throw new Error("IN_PROGRESS appointment must have scheduledDurationMinutes.");
-            mustPositiveInt("scheduledDurationMinutes", this._scheduledDurationMinutes);
-            if (!this._startedAt) throw new Error("IN_PROGRESS appointment must include startedAt.");
-        }
-
-        if (this._status === AppointmentStatus.CANCELLED && !this._cancelledAt) {
-            throw new Error("CANCELLED appointment must include cancelledAt.");
-        }
-
-        if (this._status !== AppointmentStatus.CANCELLED && this._cancelledAt) {
-            throw new Error("cancelledAt can only exist when status is CANCELLED.");
-        }
-
-        if (this._status === AppointmentStatus.NO_SHOW && !this._noShowAt) {
-            throw new Error("NO_SHOW appointment must include noShowAt.");
-        }
-
-        if (this._status !== AppointmentStatus.NO_SHOW && this._noShowAt) {
-            throw new Error("noShowAt can only exist when status is NO_SHOW.");
-        }
-
-        if (this._status === AppointmentStatus.COMPLETED && !this._completedAt) {
-            throw new Error("COMPLETED appointment must include completedAt.");
-        }
-
-        if (this._status !== AppointmentStatus.COMPLETED && this._completedAt) {
-            throw new Error("completedAt can only exist when status is COMPLETED.");
+    private ensureStatus(allowed: AppointmentStatus, action: string): void {
+        if (this._status !== allowed) {
+            this.throwInconsistent(`Cannot ${action}: current status is ${this._status}, but expected ${allowed}.`);
         }
     }
 
-
-    //Actions
-    public requestAppointment(){
-        this._status = AppointmentStatus.REQUESTED;
-    }
-
-    public scheduleAppointment(input: {
-            physicianId: EntityId;
-            scheduledStartAt: Date;
-            durationMinutes: number;
-            serviceType: ServiceType;
-    }): void {
-        this.ensureIsActiveAppointment("schedule");
-        this._physicianId = input.physicianId;
+    public rescheduleAppointment(input: { scheduledStartAt: Date; }): void {
+        this.ensureStatus(AppointmentStatus.SCHEDULED, "reschedule");
+        this._scheduledStartAt = input.scheduledStartAt;
         this._scheduledStartAt = mustValidDate("scheduledStartAt", input.scheduledStartAt);
-        this._scheduledDurationMinutes = mustPositiveInt("durationMinutes", input.durationMinutes);
-        this._status = AppointmentStatus.SCHEDULED;
-        this._serviceType = input.serviceType;
         this.touch();
         this.assertInvariants();
     }
 
     public cancelAppointment(reason?: string, at: Date = new Date()): void {
-        this.ensureIsActiveAppointment("cancel");
+        this.ensureStatus(AppointmentStatus.SCHEDULED, "cancel");
         this._status = AppointmentStatus.CANCELLED;
-        this._cancelledAt = mustValidDate("cancelledAt", at);
+        this._cancelledAt = at;
         this._cancelReason = normalizeOptional(reason);
         this.touch(at);
         this.assertInvariants();
     }
 
+    public markCheckedIn(at: Date = new Date()): void {
+        this.ensureStatus(AppointmentStatus.SCHEDULED, "check-in");
+        this._status = AppointmentStatus.CHECKED_IN;
+        this._checkedInAt = at;
+        this.touch(at);
+        this.assertInvariants();
+    }
+
     public markNoShow(at: Date = new Date()): void {
-        this.ensureIsActiveAppointment("markNoShow");
-        if (this._status !== AppointmentStatus.SCHEDULED) {
-            throw new Error("Only SCHEDULED appointments can be marked as NO_SHOW.");
-        }
+        this.ensureStatus(AppointmentStatus.SCHEDULED, "no-show");
         this._status = AppointmentStatus.NO_SHOW;
-        this._noShowAt = mustValidDate("noShowAt", at);
+        this._noShowAt = at;
         this.touch(at);
         this.assertInvariants();
     }
-
-    public markInProgress(at: Date = new Date()): void{
-        this.ensureIsActiveAppointment("markInProgress");
-        if (this._status !== AppointmentStatus.SCHEDULED) {
-            throw new Error("Only SCHEDULED appointments can be marked as IN_PROGRESS.");
-        }
-        this._startedAt = mustValidDate("startedAt", at)
+    
+    public markInProgress(at: Date): void {
+        this.ensureStatus(AppointmentStatus.CHECKED_IN, "start");
         this._status = AppointmentStatus.IN_PROGRESS;
+        this._startedAt = at;
         this.touch(at);
         this.assertInvariants();
     }
 
-    public completeAppointment(at: Date = new Date()): void {
-        this.ensureIsActiveAppointment("complete");
-        if (this._status !== AppointmentStatus.IN_PROGRESS) {
-            throw new Error("Only IN_PROGRESS appointments can be marked as COMPLETED.");
-        }
+    public completeAppointment(at: Date): void {
+        this.ensureStatus(AppointmentStatus.IN_PROGRESS, "complete");
         this._status = AppointmentStatus.COMPLETED;
-        this._completedAt = mustValidDate("completedAt", at);
+        this._completedAt = at;
         this.touch(at);
         this.assertInvariants();
-    }
-
-    private ensureIsActiveAppointment(action: string): void {
-        if (
-            this._status === AppointmentStatus.CANCELLED ||
-            this._status === AppointmentStatus.NO_SHOW ||
-            this._status === AppointmentStatus.COMPLETED
-        ) {
-            throw new Error(`Cannot ${action}: appointment is ${this._status}.`);
-        }
     }
 }
