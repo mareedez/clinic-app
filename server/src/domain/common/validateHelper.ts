@@ -17,7 +17,7 @@ export function mustPositiveInt(label: string, value: number): number {
 }
 
 export function mustValidDate(label: string, value: Date): Date {
-    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    if (Number.isNaN(value.getTime())) {
         throw new Error(`${label} must be a valid Date.`);
     }
     return value;

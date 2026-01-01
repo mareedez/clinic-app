@@ -124,7 +124,9 @@ export class Appointment extends Entity {
         const check = (condition: boolean, value: any, label: string) => {
             if (condition) {
                 if (!value) this.throwInconsistent(`${label} is required for status ${status}.`);
-                mustValidDate(label, value);
+                if (value instanceof Date) {
+                    mustValidDate(label, value);
+                }
             } else if (value !== undefined) {
                 this.throwInconsistent(`${label} cannot exist for status ${status}.`);
             }
@@ -155,15 +157,7 @@ export class Appointment extends Entity {
         }
     }
 
-    public rescheduleAppointment(input: { scheduledStartAt: Date; }): void {
-        this.ensureStatus(AppointmentStatus.SCHEDULED, "reschedule");
-        this._scheduledStartAt = input.scheduledStartAt;
-        this._scheduledStartAt = mustValidDate("scheduledStartAt", input.scheduledStartAt);
-        this.touch();
-        this.assertInvariants();
-    }
-
-    public cancelAppointment(reason?: string, at: Date = new Date()): void {
+    public cancelAppointment(reason: string, at: Date = new Date()): void {
         this.ensureStatus(AppointmentStatus.SCHEDULED, "cancel");
         this._status = AppointmentStatus.CANCELLED;
         this._cancelledAt = at;
