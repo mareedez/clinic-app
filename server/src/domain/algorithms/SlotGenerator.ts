@@ -7,6 +7,7 @@ import type { Service, TimeSlot } from "../../shared/types.js";
 const APPOINTMENT_INCREMENT = 10;
 const MIN_GAP = 10; //Appointment Gap
 
+
 export class SlotGenerator {
     public static generate(
         physician: PhysicianUser,
@@ -33,17 +34,20 @@ export class SlotGenerator {
             ![AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW, AppointmentStatus.COMPLETED].includes(apt.status)
         );
 
-        const duration = service.durationMinutes;
+        const durationMs = service.durationMinutes * 60000;
+        const incrementMs = APPOINTMENT_INCREMENT * 60000;
+        const minGapMs = MIN_GAP * 60000;
+        if (incrementMs <= 0) throw new Error("Invalid increment configuration");
 
-        while (currentTime.getTime() + duration * 60000 <= endTime.getTime()) {
-            const slotEnd = new Date(currentTime.getTime() + duration * 60000);
+        while (currentTime.getTime() + durationMs <= endTime.getTime()) {
+            const slotEnd = new Date(currentTime.getTime() + durationMs);
 
             const isConflict = activeAppts.some(apt => {
                 const aptStart = apt.scheduledStartAt!.getTime();
                 const aptEnd = apt.scheduledEndAt!.getTime();
 
-                const slotStartWithGap = currentTime.getTime() - MIN_GAP * 60000;
-                const slotEndWithGap = slotEnd.getTime() + MIN_GAP * 60000;
+                const slotStartWithGap = currentTime.getTime() - minGapMs;
+                const slotEndWithGap = slotEnd.getTime() + minGapMs;
 
                 return slotStartWithGap < aptEnd && slotEndWithGap > aptStart;
             });
@@ -51,10 +55,11 @@ export class SlotGenerator {
             slots.push({
                 startTime: new Date(currentTime),
                 endTime: slotEnd,
-                isAvailable: !isConflict
+                isAvailable: !isConflict,
+                physicianId: physician.id
             });
 
-            currentTime = new Date(currentTime.getTime() + APPOINTMENT_INCREMENT * 60000);
+            currentTime = new Date(currentTime.getTime() + incrementMs);
         }
 
         return slots;
