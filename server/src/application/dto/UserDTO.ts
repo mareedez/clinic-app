@@ -6,7 +6,7 @@ export interface UserDTO {
     email: string;
     role: UserRole;
     isActive: boolean;
-    lastLoginAt?: string; // ISO
+    lastLoginAt?: string | undefined; // ISO
     createdAt: string;
     updatedAt: string;
     displayName: string;
@@ -14,8 +14,8 @@ export interface UserDTO {
 
 export interface PhysicianDTO extends UserDTO {
     role: UserRole.PHYSICIAN;
-    specialization?: string;
-    clinicPhysicianId?: string;
+    specialization?: string | undefined;
+    clinicPhysicianId?: string | undefined;
     workingHoursStart: string;
     workingHoursEnd: string;
     workingDays: number[];
@@ -23,11 +23,12 @@ export interface PhysicianDTO extends UserDTO {
 
 export interface PatientDTO extends UserDTO {
     role: UserRole.PATIENT;
-    clinicPatientId?: string;
-    phone?: string;
-    dateOfBirth?: string;
+    clinicPatientId?: string | undefined;
+    phone?: string | undefined;
+    dateOfBirth?: string | undefined;
 }
 
 export interface FrontDeskDTO extends UserDTO {
     role: UserRole.FRONT_DESK;
+    clinicStaffId?: string | undefined;
 }

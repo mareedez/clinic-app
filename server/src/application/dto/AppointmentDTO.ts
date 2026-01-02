@@ -16,14 +16,14 @@ export interface AppointmentDTO {
 
     status: AppointmentStatus;
 
-    checkedInAt?: string;
-    startedAt?: string;
-    completedAt?: string;
+    checkedInAt?: string | undefined;
+    startedAt?: string | undefined;
+    completedAt?: string | undefined;
 
-    cancelledAt?: string;
-    cancelReason?: string;
+    cancelledAt?: string | undefined;
+    cancelReason?: string | undefined;
 
-    noShowAt?: string;
+    noShowAt?: string | undefined;
 
     createdAt: string;
     updatedAt: string;

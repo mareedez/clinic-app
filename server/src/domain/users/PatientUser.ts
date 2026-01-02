@@ -8,7 +8,6 @@ export interface PatientUserProps extends UserBaseProps {
     lastName: string;
     phone?: string;
     dateOfBirth?: string; // ISO "YYYY-MM-DD"
-    isNoShowRestricted?: boolean;
 }
 
 export class PatientUser extends User {
@@ -17,7 +16,6 @@ export class PatientUser extends User {
     private _lastName: string;
     private _phone: string | undefined;
     private _dateOfBirth: string | undefined;
-    private _isNoShowRestricted: boolean;
 
     private constructor(props: PatientUserProps) {
         super(UserRole.PATIENT, props);
@@ -31,7 +29,6 @@ export class PatientUser extends User {
             throw new Error("Date of birth must be in YYYY-MM-DD format.");
         }
 
-        this._isNoShowRestricted = props.isNoShowRestricted ?? false;
         this._clinicPatientId = normalizeOptional(props.clinicPatientId);
     }
 
@@ -61,16 +58,6 @@ export class PatientUser extends User {
 
     get displayName(): string {
         return `${this._firstName} ${this._lastName}`.trim();
-    }
-
-    get isNoShowRestricted(): boolean {
-        return this._isNoShowRestricted;
-    }
-
-    public setNoShowRestricted(value: boolean): void {
-        if (this._isNoShowRestricted === value) return;
-        this._isNoShowRestricted = value;
-        this.touch();
     }
 
     public setClinicPatientId(value: string | undefined): void {
