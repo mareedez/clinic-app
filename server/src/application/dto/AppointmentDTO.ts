@@ -27,4 +27,6 @@ export interface AppointmentDTO {
 
     createdAt: string;
     updatedAt: string;
+
+    notes?: string | undefined;
 }

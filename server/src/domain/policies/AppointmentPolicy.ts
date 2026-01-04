@@ -1,5 +1,5 @@
-import { Appointment } from "../clinic/Appointment.js";
-import { AppointmentStatus } from "../clinic/AppointmentStatusEnum.js";
+import {Appointment} from "../clinic/Appointment.js";
+import {AppointmentStatus} from "../clinic/AppointmentStatusEnum.js";
 
 // Gap between appointments, ms
 const BUFFER = 10 * 60000;
@@ -7,23 +7,28 @@ const BUFFER = 10 * 60000;
 const CANCEL_LIMIT = 24 * 60 * 60 * 1000;
 
 export class AppointmentPolicy {
-    public static hasPatientConflict(
+
+    public static hasConflict(
         newStart: Date,
         newEnd: Date,
-        patientAppointments: Appointment[]
+        existingAppointments: Appointment[]
     ): boolean {
-        return patientAppointments.some(apt => {
-            if (apt.status === AppointmentStatus.CANCELLED) return false;
+        return existingAppointments.some(apt => {
+            if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.NO_SHOW || apt.status === AppointmentStatus.IN_PROGRESS) {
+                return false;
+            }
             const aptStart = apt.scheduledStartAt!.getTime();
             const aptEnd = apt.scheduledEndAt!.getTime();
-
             return newStart.getTime() < aptEnd + BUFFER &&
-                newEnd.getTime() > aptStart - BUFFER;
+                   newEnd.getTime() > aptStart - BUFFER;
         });
     }
 
 
-    public static canCancel(apt: Appointment): boolean {
+    public static canCancel(apt: Appointment, roles: string[]): boolean {
+        if (apt.status !== AppointmentStatus.SCHEDULED) return false;
+        const isStaff = roles.includes("PHYSICIAN") || roles.includes("FRONT_DESK");
+        if (isStaff) return true;
         const now = new Date();
         const limit = new Date(apt.scheduledStartAt!.getTime() - CANCEL_LIMIT);
         return now < limit;

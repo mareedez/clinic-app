@@ -17,17 +17,17 @@ export interface AppointmentProps extends EntityProps {
     serviceType: ServiceType;
 
     // Scheduled
-    physicianId?: EntityId;
-    scheduledStartAt?: Date;
-    scheduledDurationMinutes?: number;
-    notes?: string;
+    physicianId?: EntityId | undefined;
+    scheduledStartAt?: Date | undefined;
+    scheduledDurationMinutes?: number | undefined;
+    notes?: string | undefined;
     status: AppointmentStatus;
-    checkedInAt?: Date;
-    startedAt?: Date;
-    cancelledAt?: Date;
-    cancelReason?: string;
-    noShowAt?: Date;
-    completedAt?: Date;
+    checkedInAt?: Date | undefined;
+    startedAt?: Date | undefined;
+    cancelledAt?: Date | undefined;
+    cancelReason?: string | undefined;
+    noShowAt?: Date | undefined;
+    completedAt?: Date | undefined;
 }
 
 export class Appointment extends Entity {
