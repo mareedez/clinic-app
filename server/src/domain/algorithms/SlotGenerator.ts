@@ -5,7 +5,7 @@ import type { Service, TimeSlot } from "../../shared/types.js";
 
 
 const APPOINTMENT_INCREMENT = 10;
-const MIN_GAP = 10; //Appointment Gap
+const MIN_GAP = 10;
 
 
 export class SlotGenerator {
@@ -20,47 +20,41 @@ export class SlotGenerator {
         workDate.setHours(0, 0, 0, 0);
 
         if (!physician.workingDays.includes(workDate.getDay())) return [];
-        const [startH, startM] = physician.workingHoursStart.split(":").map(Number);
-        const [endH, endM] = physician.workingHoursEnd.split(":").map(Number);
-        if (startH === undefined || endH === undefined) return [];
 
-        let currentTime = new Date(workDate);
-        currentTime.setHours(startH, startM, 0, 0);
-
-        const endTime = new Date(workDate);
-        endTime.setHours(endH, endM, 0, 0);
-
-        const activeAppts = existingAppointments.filter(apt =>
+        const [startH, startM] = physician.workingHoursStart.split(":").map(Number) as number[];
+        const [endH, endM] = physician.workingHoursEnd.split(":").map(Number) as number[];
+        const workDayStartMs = new Date(workDate).setHours(startH!, startM!, 0, 0);
+        const workDayEndMs = new Date(workDate).setHours(endH!, endM!, 0, 0);
+        const activeAppts = existingAppointments.filter(apt => 
+            apt.physicianId === physician.id &&
             ![AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW, AppointmentStatus.COMPLETED].includes(apt.status)
         );
 
         const durationMs = service.durationMinutes * 60000;
         const incrementMs = APPOINTMENT_INCREMENT * 60000;
-        const minGapMs = MIN_GAP * 60000;
-        if (incrementMs <= 0) throw new Error("Invalid increment configuration");
+        const gapMs = MIN_GAP * 60000;
+        let currentStartMs = workDayStartMs;
 
-        while (currentTime.getTime() + durationMs <= endTime.getTime()) {
-            const slotEnd = new Date(currentTime.getTime() + durationMs);
-
+        while (currentStartMs + durationMs <= workDayEndMs) {
+            const currentEndMs = currentStartMs + durationMs;
             const isConflict = activeAppts.some(apt => {
-                const aptStart = apt.scheduledStartAt!.getTime();
-                const aptEnd = apt.scheduledEndAt!.getTime();
+                const aptStartMs = new Date(apt.scheduledStartAt!).getTime();
+                const aptEndMs = new Date(apt.scheduledEndAt!).getTime();
 
-                const slotStartWithGap = currentTime.getTime() - minGapMs;
-                const slotEndWithGap = slotEnd.getTime() + minGapMs;
-
-                return slotStartWithGap < aptEnd && slotEndWithGap > aptStart;
+                return currentStartMs < (aptEndMs + gapMs) && 
+                       currentEndMs > (aptStartMs - gapMs);
             });
 
             slots.push({
-                startTime: new Date(currentTime),
-                endTime: slotEnd,
+                startTime: new Date(currentStartMs),
+                endTime: new Date(currentEndMs),
                 isAvailable: !isConflict,
                 physicianId: physician.id
             });
 
-            currentTime = new Date(currentTime.getTime() + incrementMs);
+            currentStartMs += incrementMs;
         }
+
 
         return slots;
     }

@@ -1,11 +1,12 @@
-import type {TimeSlot} from "../../shared/types.js";
-import type {TimeSlotDTO} from "../../application/dto/TimeSlotDTO.js";
+import type { TimeSlot } from "../../shared/types.js";
+import type { TimeSlotDTO } from "../../application/dto/TimeSlotDTO.js";
 
-export function toTimeSlotDTO(slot: TimeSlot, physicianId: string): TimeSlotDTO {
+
+export function toTimeSlotDTO(slot: TimeSlot): TimeSlotDTO {
     return {
         startTime: slot.startTime.toISOString(),
         endTime: slot.endTime.toISOString(),
         isAvailable: slot.isAvailable,
-        physicianId: physicianId
+        physicianId: slot.physicianId || "" 
     };
 }

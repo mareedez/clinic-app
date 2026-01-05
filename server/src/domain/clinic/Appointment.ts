@@ -16,18 +16,19 @@ export interface AppointmentProps extends EntityProps {
     createdByUserId: EntityId;
     serviceType: ServiceType;
 
-    // Scheduled
-    physicianId?: EntityId | undefined;
-    scheduledStartAt?: Date | undefined;
-    scheduledDurationMinutes?: number | undefined;
-    notes?: string | undefined;
+    physicianId?: EntityId;
+    scheduledStartAt?: Date;
+    scheduledDurationMinutes?: number;
+    
+    notes?: string;
     status: AppointmentStatus;
-    checkedInAt?: Date | undefined;
-    startedAt?: Date | undefined;
-    cancelledAt?: Date | undefined;
-    cancelReason?: string | undefined;
-    noShowAt?: Date | undefined;
-    completedAt?: Date | undefined;
+    
+    checkedInAt?: Date;
+    startedAt?: Date;
+    completedAt?: Date;
+    cancelledAt?: Date;
+    cancelReason?: string;
+    noShowAt?: Date;
 }
 
 export class Appointment extends Entity {
@@ -71,16 +72,7 @@ export class Appointment extends Entity {
         return new Appointment(props);
     }
 
-    public static createScheduled(input: Omit<
-        AppointmentProps,
-        | "status"
-        | "checkedInAt"
-        | "startedAt"
-        | "cancelledAt"
-        | "cancelReason"
-        | "noShowAt"
-        | "completedAt"
-    > & {
+    public static createScheduled(input: Omit<AppointmentProps, "status"> & {
         physicianId: EntityId;
         scheduledStartAt: Date;
         scheduledDurationMinutes: number;
@@ -96,7 +88,6 @@ export class Appointment extends Entity {
     }
 
     // Getters
-
     get patientId(): EntityId { return this._patientId; }
     get createdByUserId(): EntityId { return this._createdByUserId; }
     get serviceType(): ServiceType { return this._serviceType; }
@@ -117,48 +108,50 @@ export class Appointment extends Entity {
         return addMinutes(this._scheduledStartAt, this._scheduledDurationMinutes);
     }
 
-    // Error handling
-
+    // Validation
     private assertInvariants(): void {
         const status = this._status;
-        const check = (condition: boolean, value: any, label: string) => {
-            if (condition) {
-                if (!value) this.throwInconsistent(`${label} is required for status ${status}.`);
-                if (value instanceof Date) {
-                    mustValidDate(label, value);
-                }
-            } else if (value !== undefined) {
-                this.throwInconsistent(`${label} cannot exist for status ${status}.`);
+        const required = (value: any, label: string) => {
+            if (value === undefined || value === null) {
+                this.throwInconsistent(`${label} is required for status ${status}.`);
             }
         };
 
-        if (!this._physicianId) this.throwInconsistent("Physician is required.");
-        check(true, this._scheduledStartAt, "scheduledStartAt");
-        if (this._scheduledDurationMinutes === undefined) this.throwInconsistent("Duration is required.");
-        const isCheckedIn = [AppointmentStatus.CHECKED_IN, AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED].includes(status);
-        const isStarted = [AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED].includes(status);
-        const isCompleted = status === AppointmentStatus.COMPLETED;
-        const isCancelled = status === AppointmentStatus.CANCELLED;
-        check(isCheckedIn, this._checkedInAt, "checkedInAt");
-        check(isStarted, this._startedAt, "startedAt");
-        check(isCompleted, this._completedAt, "completedAt");
-        check(status === AppointmentStatus.CANCELLED, this._cancelledAt, "cancelledAt");
-        check(isCancelled, this._cancelReason, "cancelReason");
-        check(status === AppointmentStatus.NO_SHOW, this._noShowAt, "noShowAt");
-        assertDateOrder(this._checkedInAt, this._startedAt, this.throwInconsistent.bind(this), "Start time cannot be before check-in.");
-        assertDateOrder(this._startedAt, this._completedAt, this.throwInconsistent.bind(this), "Completion time cannot be before start.");
+        if (this._scheduledStartAt) mustValidDate("scheduledStartAt", this._scheduledStartAt);
+
+        if (status === AppointmentStatus.CHECKED_IN) {
+            required(this._checkedInAt, "checkedInAt");
+        }
+
+        if (status === AppointmentStatus.IN_PROGRESS) {
+            required(this._checkedInAt, "checkedInAt");
+            required(this._startedAt, "startedAt");
+            assertDateOrder(this._checkedInAt, this._startedAt, this.throwInconsistent.bind(this), "Start time cannot be before check-in.");
+        }
+
+        if (status === AppointmentStatus.COMPLETED) {
+            required(this._startedAt, "startedAt");
+            required(this._completedAt, "completedAt");
+            assertDateOrder(this._startedAt, this._completedAt, this.throwInconsistent.bind(this), "Completion time cannot be before start.");
+        }
+
+        if (status === AppointmentStatus.CANCELLED) {
+            required(this._cancelledAt, "cancelledAt");
+            required(this._cancelReason, "cancelReason");
+        }
     }
 
     // Methods
-
-    private ensureStatus(allowed: AppointmentStatus, action: string): void {
-        if (this._status !== allowed) {
-            this.throwInconsistent(`Cannot ${action}: current status is ${this._status}, but expected ${allowed}.`);
+    private ensureStatus(allowed: AppointmentStatus | AppointmentStatus[], action: string): void {
+        const isAllowed = Array.isArray(allowed) ? allowed.includes(this._status) : this._status === allowed;
+        if (!isAllowed) {
+            this.throwInconsistent(`Cannot ${action}: current status is ${this._status}.`);
         }
     }
 
     public cancelAppointment(reason: string, at: Date = new Date()): void {
         this.ensureStatus(AppointmentStatus.SCHEDULED, "cancel");
+        if (!reason.trim()) this.throwInconsistent("Cancellation reason is required.");
         this._status = AppointmentStatus.CANCELLED;
         this._cancelledAt = at;
         this._cancelReason = normalizeOptional(reason);
@@ -181,8 +174,8 @@ export class Appointment extends Entity {
         this.touch(at);
         this.assertInvariants();
     }
-    
-    public markInProgress(at: Date): void {
+
+    public markInProgress(at: Date = new Date()): void {
         this.ensureStatus(AppointmentStatus.CHECKED_IN, "start");
         this._status = AppointmentStatus.IN_PROGRESS;
         this._startedAt = at;
@@ -190,7 +183,7 @@ export class Appointment extends Entity {
         this.assertInvariants();
     }
 
-    public completeAppointment(at: Date): void {
+    public completeAppointment(at: Date = new Date()): void {
         this.ensureStatus(AppointmentStatus.IN_PROGRESS, "complete");
         this._status = AppointmentStatus.COMPLETED;
         this._completedAt = at;
