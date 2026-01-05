@@ -3,13 +3,15 @@ import { Appointment } from "../../../domain/clinic/Appointment.js";
 import { AppointmentPolicy } from "../../../domain/policies/AppointmentPolicy.js";
 import { ScheduleAppointmentSchema } from "./schemas.js";
 import { ValidationError } from "./errors.js";
-import { toAppointmentDTO } from "./AppointmentMapper.js";
-import type {RequestContext} from "../../../shared/types.js";
+import { AppointmentMapper } from "./AppointmentMapper.js";
+import type { RequestContext } from "../../../shared/types.js";
 import { addMinutes } from "../../../domain/common/validateHelper.js";
 
-
 export class CreateScheduledAppointment {
-    constructor(private readonly repo: AppointmentRepository) {}
+    constructor(
+        private readonly repo: AppointmentRepository,
+        private readonly mapper: AppointmentMapper
+    ) {}
 
     async execute(input: unknown, ctx: RequestContext) {
         const validated = ScheduleAppointmentSchema.parse(input);
@@ -18,24 +20,35 @@ export class CreateScheduledAppointment {
 
         const drApts = await this.repo.getByPhysicianAndDate(validated.physicianId, start);
         if (AppointmentPolicy.hasConflict(start, end, drApts)) {
-            throw new ValidationError("Physician is already booked at this time.");
-        }
-        const patientApts = await this.repo.list({ patientId: validated.patientId });
-        if (AppointmentPolicy.hasConflict(start, end, patientApts)) {
-            throw new ValidationError("Patient has a conflicting appointment.");
+            throw new ValidationError("The physician is already booked for this time slot.");
         }
 
-        const apt = Appointment.createScheduled({
+        const patientApts = await this.repo.list({ 
+            patientId: validated.patientId,
+            scheduledFrom: new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0),
+            scheduledTo: new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59)
+        });
+        
+        if (AppointmentPolicy.hasConflict(start, end, patientApts)) {
+            throw new ValidationError("You already have a conflicting appointment at this time.");
+        }
+
+        const props: any = {
             patientId: validated.patientId,
             physicianId: validated.physicianId,
             serviceType: validated.serviceType,
             scheduledStartAt: validated.scheduledStartAt,
             scheduledDurationMinutes: validated.scheduledDurationMinutes,
-            notes: validated.notes,
             createdByUserId: ctx.userId,
-        });
+        };
 
+        if (validated.notes !== undefined) {
+            props.notes = validated.notes;
+        }
+
+        const apt = Appointment.createScheduled(props);
         await this.repo.save(apt);
-        return toAppointmentDTO(apt);
+
+        return await this.mapper.toDTO(apt);
     }
 }
