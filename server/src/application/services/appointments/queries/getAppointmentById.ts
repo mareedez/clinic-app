@@ -1,19 +1,17 @@
 import type { AppointmentRepository } from "../../../../ports/repositories/AppointmentRepository.js";
-import type { EntityId } from "../../../../domain/common/id.js";
+import { AppointmentMapper } from "../AppointmentMapper.js";
 import { NotFoundError } from "../errors.js";
-import { toAppointmentDTO } from "../AppointmentMapper.js";
-
-export interface RequestContext {
-    userId: EntityId;
-    roles?: string[];
-}
+import type { RequestContext } from "../../../../shared/types.js";
 
 export class GetAppointmentById {
-    constructor(private readonly repo: AppointmentRepository) {}
+    constructor(
+        private readonly repo: AppointmentRepository,
+        private readonly mapper: AppointmentMapper
+    ) {}
 
-    async execute(appointmentId: EntityId, _ctx: RequestContext) {
-        const apt = await this.repo.getById(appointmentId);
+    async execute(id: string, _ctx: RequestContext) {
+        const apt = await this.repo.getById(id);
         if (!apt) throw new NotFoundError("Appointment not found.");
-        return toAppointmentDTO(apt);
+        return await this.mapper.toDTO(apt);
     }
 }
