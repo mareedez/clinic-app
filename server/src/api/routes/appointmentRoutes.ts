@@ -11,26 +11,50 @@ import { ListAppointments } from "../../application/services/appointments/querie
 import { GetAppointmentById } from "../../application/services/appointments/queries/getAppointmentById.js";
 import type {RequestContext} from "../../shared/types.js";
 import type {AuthenticatedRequest} from "../middleware/auth.js";
+import {GetPhysicianDashboard} from "../../application/services/appointments/queries/GetPhysicianDashboard.js";
+import {GetPatientDashboard} from "../../application/services/appointments/queries/GetPatientDashboard.js";
+import {AppointmentMapper} from "../../application/services/appointments/AppointmentMapper.js";
+import type {UserRepository} from "../../ports/repositories/UserRepository.js";
+import {SearchPatients} from "../../application/services/appointments/queries/SearchPatients.js";
+import {RegisterWalkIn} from "../../application/services/appointments/RegisterWalkIn.js";
+import {GetDailyReport} from "../../application/services/appointments/queries/GetDailyReport.js";
 
-export function createAppointmentRouter(repo: AppointmentRepository) {
+export function createAppointmentRouter(repo: AppointmentRepository, userRepo: UserRepository) {
     const router = Router();
-
-    const scheduleService = new CreateScheduledAppointment(repo);
-    const cancelService = new CancelScheduledAppointment(repo);
-    const checkInService = new CheckInAppointment(repo);
-    const startService = new StartAppointment(repo);
-    const completeService = new CompleteAppointment(repo);
-    const noShowService = new MarkNoShow(repo);
-
-    const slotsService = new GetAvailableSlots(repo);
-    const listService = new ListAppointments(repo);
-    const getByIdService = new GetAppointmentById(repo);
-
+    const mapper = new AppointmentMapper(userRepo);
+    const scheduleService = new CreateScheduledAppointment(repo, mapper);
+    const cancelService = new CancelScheduledAppointment(repo, mapper);
+    const checkInService = new CheckInAppointment(repo, mapper);
+    const startService = new StartAppointment(repo, mapper);
+    const completeService = new CompleteAppointment(repo, mapper);
+    const noShowService = new MarkNoShow(repo, mapper);
+    const dashboardService = new GetPhysicianDashboard(repo, mapper);
+    const patientDashboardService = new GetPatientDashboard(repo, mapper);
+    const slotsService = new GetAvailableSlots(repo, userRepo);
+    const listService = new ListAppointments(repo, mapper);
+    const getByIdService = new GetAppointmentById(repo, mapper);
+    const searchPatientsService = new SearchPatients(userRepo);
+    const registerWalkInService = new RegisterWalkIn(repo, userRepo, mapper);
+    const reportService = new GetDailyReport(repo, mapper);
     const getCtx = (req: any): RequestContext => {
         if (!req.context) throw new Error("Request context is missing. Check auth middleware.");
         return req.context;
     };
 
+    router.get("/dashboard/patient", async (req, res, next) => {
+        try {
+            const result = await patientDashboardService.execute(getCtx(req));
+            res.json(result);
+        } catch (error) { next(error); }
+    });
+
+    router.get("/patients/search", async (req, res, next) => {
+        try {
+            const query = req.query.q as string;
+            const result = await searchPatientsService.execute(query);
+            res.json(result);
+        } catch (error) { next(error); }
+    });
 
     router.get("/", async (req: AuthenticatedRequest, res, next) => {
         try {
@@ -46,9 +70,25 @@ export function createAppointmentRouter(repo: AppointmentRepository) {
         } catch (error) { next(error); }
     });
 
+    router.get("/dashboard/physician", async (req, res, next) => {
+        try {
+            const result = await dashboardService.execute(getCtx(req));
+            res.json(result);
+        } catch (error) { next(error); }
+    });
+
     router.get("/:id", async (req, res, next) => {
         try {
             const result = await getByIdService.execute(req.params.id as any, getCtx(req));
+            res.json(result);
+        } catch (error) { next(error); }
+    });
+
+    router.get("/reports/daily", async (req, res, next) => {
+        try {
+            // Можно передать ?date=YYYY-MM-DD
+            const date = req.query.date ? new Date(req.query.date as string) : new Date();
+            const result = await reportService.execute(date);
             res.json(result);
         } catch (error) { next(error); }
     });
@@ -98,6 +138,13 @@ export function createAppointmentRouter(repo: AppointmentRepository) {
             const input = { ...req.body, appointmentId: req.params.id };
             const result = await noShowService.execute(input, getCtx(req));
             res.json(result);
+        } catch (error) { next(error); }
+    });
+
+    router.post("/walk-in", async (req, res, next) => {
+        try {
+            const result = await registerWalkInService.execute(req.body, getCtx(req));
+            res.status(201).json(result);
         } catch (error) { next(error); }
     });
 
