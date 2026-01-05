@@ -2,31 +2,45 @@ import type { EntityId } from "../../domain/common/id.js";
 import type { AppointmentStatus } from "../../domain/clinic/AppointmentStatusEnum.js";
 import type { ServiceType } from "../../domain/clinic/ServiceEnum.js";
 
+
 export interface AppointmentDTO {
     id: EntityId;
-
-    patientId: EntityId;
-    createdByUserId: EntityId;
-    serviceType: ServiceType;
-
-    physicianId: EntityId;
-    scheduledStartAt: string; // ISO
-    scheduledDurationMinutes: number;
-    scheduledEndAt: string; // ISO
-
     status: AppointmentStatus;
 
-    checkedInAt?: string | undefined;
-    startedAt?: string | undefined;
-    completedAt?: string | undefined;
+    patient: {
+        id: EntityId;
+        displayName: string;
+    };
 
-    cancelledAt?: string | undefined;
-    cancelReason?: string | undefined;
+    physician?: {
+        id: EntityId;
+        displayName: string;
+    } | undefined;
 
-    noShowAt?: string | undefined;
+    service: {
+        id: EntityId;
+        type: ServiceType;
+        displayName: string;
+        price: number;
+    };
 
-    createdAt: string;
-    updatedAt: string;
+    schedule: {
+        startAt?: string | undefined; // ISO String
+        endAt?: string | undefined;   // ISO String
+        durationMinutes?: number | undefined;
+    };
+
+    lifeCycle: {
+        createdAt: string; // ISO String
+        createdBy: EntityId;
+        updatedAt: string; // ISO String
+        checkedInAt?: string | undefined;
+        startedAt?: string | undefined;
+        completedAt?: string | undefined;
+        cancelledAt?: string | undefined;
+        cancelReason?: string | undefined;
+        noShowAt?: string | undefined;
+    };
 
     notes?: string | undefined;
 }
