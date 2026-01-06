@@ -28,33 +28,40 @@ const port = Number(process.env.PORT ?? 4000);
 
 const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
-    : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4000"];
+    : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4000", "http://127.0.0.1:4000"];
 
 const io = new Server(httpServer, {
     cors: {
         origin: allowedOrigins,
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    }
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ["polling", "websocket"],
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
 app.set("io", io);
 
-//Middleware Stack
+// Middleware Stack
 app.use(cors({
     origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
 }));
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-            "connect-src": ["'self'", "ws://localhost:4000", "http://localhost:4000", ...allowedOrigins],
+            "connect-src": ["'self'", "ws:", "wss:", "http:", "https:", "localhost:*", "127.0.0.1:*"],
+            "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         },
     },
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
 app.use(express.json());
 app.use(morgan(isProduction ? "combined" : "dev"));
 
