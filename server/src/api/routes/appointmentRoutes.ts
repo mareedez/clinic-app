@@ -19,6 +19,7 @@ import { SearchPatients } from "../../application/services/appointments/queries/
 import { RegisterWalkIn } from "../../application/services/appointments/RegisterWalkIn.js";
 import { GetDailyReport } from "../../application/services/appointments/queries/GetDailyReport.js";
 import {CLINIC_CONFIG} from "../../config/clinicConfig.js";
+import {GetFrontDeskDashboard} from "../../application/services/appointments/queries/GetFrontDeskDashboard.js";
 
 export function createAppointmentRouter(repo: AppointmentRepository, userRepo: UserRepository) {
     const router = Router();
@@ -39,6 +40,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     const searchPatientsService = new SearchPatients(userRepo);
     const registerWalkInService = new RegisterWalkIn(repo, userRepo, mapper);
     const reportService = new GetDailyReport(repo, mapper);
+    const frontDeskDashboardService = new GetFrontDeskDashboard(repo, userRepo, mapper);
 
     // Helpers
     const getCtx = (req: any): RequestContext => {
@@ -76,6 +78,13 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.get("/dashboard/physician", async (req, res, next) => {
         try {
             const result = await dashboardService.execute(getCtx(req));
+            res.json(result);
+        } catch (error) { next(error); }
+    });
+
+    router.get("/dashboard/frontdesk", async (req, res, next) => {
+        try {
+            const result = await frontDeskDashboardService.execute();
             res.json(result);
         } catch (error) { next(error); }
     });

@@ -1,14 +1,17 @@
-import type {AppointmentDTO} from "./AppointmentDTO.js";
-
 export interface ClinicReportDTO {
-    generatedAt: string;
-    period: string;
     summary: {
         totalAppointments: number;
-        completed: number;
-        cancelled: number;
         noShow: number;
-        utilizationRate: string;
+        completed: number;
+        revenue: number;
     };
-    details: AppointmentDTO[];
+    physicianPerformance: {
+        name: string;
+        completed: number;
+        noShow: number;
+    }[];
+    serviceBreakdown: {
+        type: string;
+        count: number;
+    }[];
 }
