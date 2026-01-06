@@ -1,35 +1,72 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Toaster } from "./shared/ui/sonner";
+import { TooltipProvider } from "./shared/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./features/auth/auth";
+import {ThemeProvider} from "./shared/theme";
+import LoadingSpinner from "./widgets/LoadingSpinner";
 
-function App() {
-  const [count, setCount] = useState(0)
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+import {Login} from "./pages/Login";
+import {PatientPage} from "./pages/PatientPage";
+import {NewAppointment} from "./pages/NewAppointment";
+import {PhysicianPage} from "./pages/PhysicianPage";
+import {FrontDeskPage} from "./pages/FrontDeskPage";
+import {NotFoundPage} from "./pages/NotFoundPage";
+
+const queryClient = new QueryClient();
+
+function DashboardRouter() {
+    const { user, isLoading } = useAuth();
+
+    if (isLoading) {
+        return <LoadingSpinner />;
+    }
+
+    if (!user) {
+        return <Navigate to="/" replace />;
+    }
+
+    switch (user.role) {
+        case "PATIENT":
+            return <PatientPage />;
+        case "PHYSICIAN":
+            return <PhysicianPage />;
+        case "FRONT_DESK":
+            return <FrontDeskPage />;
+        default:
+            return <Navigate to="/" replace />;
+    }
 }
 
-export default App
+function AppRoutes() {
+    return (
+        <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/dashboard" element={<DashboardRouter />} />
+            <Route path="/patient" element={<PatientPage />} />
+            <Route path="/patient/new_appointment" element={<NewAppointment />} />
+            <Route path="/physician" element={<PhysicianPage />} />
+            <Route path="/front-desk" element={<FrontDeskPage />} />
+            {/* Catch all */}
+            <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+    );
+}
+
+export default function App() {
+    return (
+        <ThemeProvider>
+            <QueryClientProvider client={queryClient}>
+                <TooltipProvider>
+                    <Toaster />
+                    <BrowserRouter>
+                        <AuthProvider>
+                            <AppRoutes />
+                        </AuthProvider>
+                    </BrowserRouter>
+                </TooltipProvider>
+            </QueryClientProvider>
+        </ThemeProvider>
+    );
+}
