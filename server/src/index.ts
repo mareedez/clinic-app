@@ -99,6 +99,10 @@ io.on("connection", (socket) => {
             socket.join("physicians");
             socket.join(`physician-${data.userId}`);
         }
+
+        if (data.roles.includes("PATIENT")) {
+            socket.join(`patient-${data.userId}`);
+        }
     });
 
     socket.on("disconnect", () => {

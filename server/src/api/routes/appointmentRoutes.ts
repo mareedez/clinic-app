@@ -46,16 +46,20 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
         return req.context;
     };
 
-    const notifyUpdates = (req: any, physicianId?: string) => {
+    const notifyUpdates = (req: any, physicianId?: string, patientId?: string) => {
         const io = req.app.get("io");
         if (!io) return;
 
         io.to("front-desk").emit("dashboard-update");
+
         if (physicianId) {
             io.to(`physician-${physicianId}`).emit("appointment-update");
-        } else {
-            io.to("physicians").emit("appointment-update");
         }
+
+        if (patientId) {
+            io.to(`patient-${patientId}`).emit("dashboard-update");
+        }
+        io.to("physicians").emit("appointment-update");
     };
 
     router.get("/config", async (_req, res) => {
@@ -116,7 +120,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.post("/", async (req, res, next) => {
         try {
             const result = await scheduleService.execute(req.body, getCtx(req));
-            notifyUpdates(req, result.physician?.id);
+            notifyUpdates(req, result.physician?.id, result.patient?.id);
             res.status(201).json(result);
         } catch (error) { next(error); }
     });
@@ -124,7 +128,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.post("/walk-in", async (req, res, next) => {
         try {
             const result = await registerWalkInService.execute(req.body, getCtx(req));
-            notifyUpdates(req, result.physician?.id);
+            notifyUpdates(req, result.physician?.id, result.patient?.id);
             res.status(201).json(result);
         } catch (error) { next(error); }
     });
@@ -132,7 +136,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.post("/:id/cancel", async (req, res, next) => {
         try {
             const result = await cancelService.execute({ ...req.body, appointmentId: req.params.id }, getCtx(req));
-            notifyUpdates(req, result.physician?.id);
+            notifyUpdates(req, result.physician?.id, result.patient?.id);
             res.json(result);
         } catch (error) { next(error); }
     });
@@ -140,7 +144,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.post("/:id/check-in", async (req, res, next) => {
         try {
             const result = await checkInService.execute({ ...req.body, appointmentId: req.params.id }, getCtx(req));
-            notifyUpdates(req, result.physician?.id);
+            notifyUpdates(req, result.physician?.id, result.patient?.id);
             res.json(result);
         } catch (error) { next(error); }
     });
@@ -148,7 +152,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.post("/:id/start", async (req, res, next) => {
         try {
             const result = await startService.execute({ ...req.body, appointmentId: req.params.id }, getCtx(req));
-            notifyUpdates(req, result.physician?.id);
+            notifyUpdates(req, result.physician?.id, result.patient?.id);
             res.json(result);
         } catch (error) { next(error); }
     });
@@ -156,7 +160,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.post("/:id/complete", async (req, res, next) => {
         try {
             const result = await completeService.execute({ ...req.body, appointmentId: req.params.id }, getCtx(req));
-            notifyUpdates(req, result.physician?.id);
+            notifyUpdates(req, result.physician?.id, result.patient?.id);
             res.json(result);
         } catch (error) { next(error); }
     });
@@ -164,7 +168,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     router.post("/:id/no-show", async (req, res, next) => {
         try {
             const result = await noShowService.execute({ ...req.body, appointmentId: req.params.id }, getCtx(req));
-            notifyUpdates(req, result.physician?.id);
+            notifyUpdates(req, result.physician?.id, result.patient?.id);
             res.json(result);
         } catch (error) { next(error); }
     });
