@@ -1,14 +1,11 @@
-import { Appointment } from "../clinic/Appointment.js";
-import { AppointmentStatus } from "../clinic/AppointmentStatusEnum.js";
-import { PhysicianUser } from "../users/PhysicianUser.js";
-import type { Service, TimeSlot } from "../../shared/types.js";
-
-
-const APPOINTMENT_INCREMENT = 10;
-const MIN_GAP = 10;
-
+import {Appointment} from "../clinic/Appointment.js";
+import {AppointmentStatus} from "../clinic/AppointmentStatusEnum.js";
+import {PhysicianUser} from "../users/PhysicianUser.js";
+import {CLINIC_CONFIG} from "../../config/clinicConfig.js";
+import type {Service, TimeSlot} from "../../shared/types.js";
 
 export class SlotGenerator {
+
     public static generate(
         physician: PhysicianUser,
         date: Date,
@@ -16,33 +13,44 @@ export class SlotGenerator {
         existingAppointments: Appointment[]
     ): TimeSlot[] {
         const slots: TimeSlot[] = [];
+
         const workDate = new Date(date);
-        workDate.setHours(0, 0, 0, 0);
+        const year = workDate.getUTCFullYear();
+        const month = workDate.getUTCMonth();
+        const day = workDate.getUTCDate();
 
-        if (!physician.workingDays.includes(workDate.getDay())) return [];
+        const targetDate = new Date(year, month, day, 0, 0, 0, 0);
 
-        const [startH, startM] = physician.workingHoursStart.split(":").map(Number) as number[];
-        const [endH, endM] = physician.workingHoursEnd.split(":").map(Number) as number[];
-        const workDayStartMs = new Date(workDate).setHours(startH!, startM!, 0, 0);
-        const workDayEndMs = new Date(workDate).setHours(endH!, endM!, 0, 0);
+        if (!physician.workingDays.includes(targetDate.getDay())) return [];
+
+        const [startH, startM] = physician.workingHoursStart.split(":").map(Number);
+        const [endH, endM] = physician.workingHoursEnd.split(":").map(Number);
+
+        const workDayStartMs = new Date(year, month, day, startH || 0, startM || 0, 0, 0).getTime();
+        const workDayEndMs = new Date(year, month, day, endH || 0, endM || 0, 0, 0).getTime();
+
         const activeAppts = existingAppointments.filter(apt => 
             apt.physicianId === physician.id &&
             ![AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW, AppointmentStatus.COMPLETED].includes(apt.status)
         );
 
         const durationMs = service.durationMinutes * 60000;
-        const incrementMs = APPOINTMENT_INCREMENT * 60000;
-        const gapMs = MIN_GAP * 60000;
+        const incrementMs = CLINIC_CONFIG.booking.slotIncrementMs;
+        const gapMs = CLINIC_CONFIG.booking.minGapBetweenAppointmentsMs;
+        
         let currentStartMs = workDayStartMs;
 
         while (currentStartMs + durationMs <= workDayEndMs) {
             const currentEndMs = currentStartMs + durationMs;
-            const isConflict = activeAppts.some(apt => {
-                const aptStartMs = new Date(apt.scheduledStartAt!).getTime();
-                const aptEndMs = new Date(apt.scheduledEndAt!).getTime();
 
-                return currentStartMs < (aptEndMs + gapMs) && 
-                       currentEndMs > (aptStartMs - gapMs);
+            const isConflict = activeAppts.some(apt => {
+                if (!apt.scheduledStartAt || !apt.scheduledEndAt) return false;
+                
+                const aptStartMs = apt.scheduledStartAt.getTime();
+                const aptEndMs = apt.scheduledEndAt.getTime();
+
+                return currentStartMs < (aptEndMs + gapMs) &&
+                    currentEndMs > (aptStartMs - gapMs);
             });
 
             slots.push({
@@ -54,7 +62,6 @@ export class SlotGenerator {
 
             currentStartMs += incrementMs;
         }
-
 
         return slots;
     }

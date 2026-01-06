@@ -42,5 +42,12 @@ export interface AppointmentDTO {
         noShowAt?: string | undefined;
     };
 
+    permissions: {
+        canBeCancelled: boolean;
+        canBeCheckedIn: boolean;
+        canBeStarted: boolean;
+        canBeCompleted: boolean;
+    };
+
     notes?: string | undefined;
 }

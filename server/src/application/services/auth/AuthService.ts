@@ -3,16 +3,20 @@ import { LoginSchema } from "./schemas.js";
 import { ValidationError } from "../appointments/errors.js";
 
 const DEMO_USERS = [
-    { id: "pat-demo", email: "demo.patient@clinic.local", password: "Demo@12345", roles: ["patient"] },
-    { id: "doc-demo", email: "demo.doctor@clinic.local", password: "Demo@12345", roles: ["physician"] },
-    { id: "fd-demo", email: "demo.desk@clinic.local", password: "Demo@12345", roles: ["front_desk"] }
+    { id: "pat-demo", email: "demo.patient@clinic.local", password: "Demo@12345", roles: ["PATIENT"] },
+    { id: "doc-demo", email: "demo.doctor@clinic.local", password: "Demo@12345", roles: ["PHYSICIAN"] },
+    { id: "fd-demo", email: "demo.desk@clinic.local", password: "Demo@12345", roles: ["FRONT_DESK"] }
 ];
 
 export class AuthService {
     private readonly jwtSecret: string;
 
     constructor() {
-        this.jwtSecret = process.env.JWT_SECRET || "fallback-secret-for-dev-only";
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            throw new Error("JWT_SECRET environment variable is required");
+        }
+        this.jwtSecret = secret;
     }
 
     async login(input: unknown) {
@@ -23,10 +27,10 @@ export class AuthService {
         }
 
         const token = jwt.sign(
-            { 
-                sub: user.id, 
-                roles: user.roles[0],
-                email: user.email 
+            {
+                sub: user.id,
+                roles: user.roles,
+                email: user.email
             },
             this.jwtSecret,
             { expiresIn: "8h" }
@@ -37,7 +41,7 @@ export class AuthService {
             user: {
                 id: user.id,
                 email: user.email,
-                roles: user.roles[0]
+                role: user.roles[0]
             }
         };
     }

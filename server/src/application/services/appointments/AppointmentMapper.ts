@@ -2,6 +2,8 @@ import { Appointment } from "../../../domain/clinic/Appointment.js";
 import type {AppointmentDTO} from "../../dto/AppointmentDTO.js";
 import { SERVICE_DISPLAY_NAMES } from "../ServiceName.js";
 import type {UserRepository} from "../../../ports/repositories/UserRepository.js";
+import {AppointmentStatus} from "../../../domain/clinic/AppointmentStatusEnum.js";
+import {CLINIC_CONFIG} from "../../../config/clinicConfig.js";
 
 export class AppointmentMapper {
     constructor(private readonly userRepo: UserRepository) {}
@@ -11,6 +13,13 @@ export class AppointmentMapper {
             this.userRepo.getById(a.patientId),
             a.physicianId ? this.userRepo.getById(a.physicianId) : Promise.resolve(undefined)
         ]);
+        const now = new Date();
+        const startTime = a.scheduledStartAt;
+        const hoursUntil = startTime ? (startTime.getTime() - now.getTime()) / (1000 * 60 * 60) : 0;
+        const canCancel = a.status === AppointmentStatus.SCHEDULED && hoursUntil >= CLINIC_CONFIG.booking.cancellationWindowHours;
+        const canCheckIn = a.status === AppointmentStatus.SCHEDULED;
+        const canStart = a.status === AppointmentStatus.CHECKED_IN;
+        const canComplete = a.status === AppointmentStatus.IN_PROGRESS;
 
         const dto: AppointmentDTO = {
             id: a.id,
@@ -46,8 +55,16 @@ export class AppointmentMapper {
                 noShowAt: a.noShowAt?.toISOString(),
             },
 
+            permissions: {
+                canBeCancelled: canCancel,
+                canBeCheckedIn: canCheckIn,
+                canBeStarted: canStart,
+                canBeCompleted: canComplete
+            },
+
             notes: a.notes,
         };
+
 
         if (physician) {
             dto.physician = {
