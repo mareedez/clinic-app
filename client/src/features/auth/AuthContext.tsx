@@ -4,8 +4,8 @@ import React, {
     useCallback,
     useEffect,
 } from "react";
-import type {User} from "../../entities/types";
-import {apiClient} from "../../api/api-client";
+import type { UserDTO } from "../../../../server/src/application/dto/UserDTO";
+import { apiClient } from "../../api/api-client";
 
 
 function decodeJWT(token: string): Record<string, unknown> | null {
@@ -26,18 +26,18 @@ function isTokenExpired(token: string): boolean {
 }
 
 interface AuthContextType {
-    user: User | null;
+    user: UserDTO | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
     logout: () => void;
-    setUser: (user: User | null) => void;
+    setUser: (user: UserDTO | null) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<UserDTO | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {

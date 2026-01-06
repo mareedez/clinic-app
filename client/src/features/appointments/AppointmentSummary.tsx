@@ -1,27 +1,25 @@
 import { memo } from "react";
 import { User, Calendar, Clock } from "lucide-react";
 import { formatDateFull } from "../../shared/lib/time-utils";
-import { mockDoctors, mockServices } from "../../shared/lib/mockdata";
+import type { UserDTO } from "../../../../server/src/application/dto/UserDTO";
+import type { ServiceDTO } from "../../../../server/src/application/dto/ServiceDTO";
 
 interface AppointmentSummaryProps {
-    selectedService: string;
-    selectedDoctor: string;
+    service: ServiceDTO | null;
+    doctor: UserDTO | null;
     selectedDate: string;
     selectedTime: string;
 }
 
 export const AppointmentSummary = memo(
     ({
-         selectedService,
-         selectedDoctor,
+         service,
+         doctor,
          selectedDate,
          selectedTime,
      }: AppointmentSummaryProps) => {
 
-        const doctor = mockDoctors.find((d) => d.id === selectedDoctor);
-        const service = mockServices.find((s) => s.id === selectedService);
-
-        if (!selectedService || !selectedDoctor || !selectedDate || !selectedTime) {
+        if (!service || !doctor || !selectedDate || !selectedTime) {
             return null;
         }
 
@@ -41,9 +39,9 @@ export const AppointmentSummary = memo(
                         <div>
                             <p className="text-[10px] text-muted-foreground uppercase font-bold">Physician</p>
                             <p className="font-semibold text-foreground text-sm">
-                                Dr. {doctor?.firstName} {doctor?.lastName}
+                                {doctor.displayName}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">{doctor?.specialization}</p>
+                            <p className="text-[10px] text-muted-foreground">Specialist</p>
                         </div>
                     </div>
 
@@ -54,9 +52,9 @@ export const AppointmentSummary = memo(
                         <div>
                             <p className="text-[10px] text-muted-foreground uppercase font-bold">Service</p>
                             <p className="font-semibold text-foreground text-sm">
-                                {service?.name}
+                                {service.name}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">{service?.durationMinutes} minutes</p>
+                            <p className="text-[10px] text-muted-foreground">Clinical Service</p>
                         </div>
                     </div>
 

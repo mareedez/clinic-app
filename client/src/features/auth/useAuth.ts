@@ -14,7 +14,7 @@ export function useRequireAuth(allowedRoles?: string[]) {
     const isAuthorized = useMemo(() => {
         if (!user) return false;
         if (!allowedRoles) return true;
-        return allowedRoles.includes(user.roles);
+        return allowedRoles.includes(user.role);
     }, [user, allowedRoles]);
 
     return {

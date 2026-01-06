@@ -1,6 +1,7 @@
-import { memo } from "react";
-import { CheckCircle, Clock } from "lucide-react";
-import { mockDoctors } from "../../shared/lib/mockdata";
+import { memo, useEffect, useState } from "react";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { apiClient } from "../../api/api-client";
+import type { UserDTO } from "../../../../server/src/application/dto/UserDTO";
 
 interface DoctorSelectorProps {
     selectedService: string;
@@ -18,8 +19,28 @@ export const DoctorSelector = memo(
          onSelect,
          onExpand,
      }: DoctorSelectorProps) => {
-        const selectedDoctorData = mockDoctors.find((d) => d.id === selectedDoctor);
-        const availableDoctors = selectedService ? mockDoctors : [];
+        const [doctors, setDoctors] = useState<UserDTO[]>([]);
+        const [isLoading, setIsLoading] = useState(false);
+
+        useEffect(() => {
+            const fetchDoctors = async () => {
+                setIsLoading(true);
+                try {
+                    const response = await apiClient.get<UserDTO[]>("appointments/physicians");
+                    setDoctors(response.data);
+                } catch (error) {
+                    console.error("Failed to fetch physicians", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            if (isExpanded || (selectedDoctor && doctors.length === 0)) {
+                fetchDoctors();
+            }
+        }, [isExpanded, selectedDoctor, doctors.length]);
+
+        const selectedDoctorData = doctors.find((d) => d.id === selectedDoctor);
 
         if (!selectedService) {
             return null;
@@ -32,40 +53,45 @@ export const DoctorSelector = memo(
                         <label className="block text-sm font-semibold text-foreground mb-3">
                             Select Doctor
                         </label>
-                        <div className="space-y-1">
-                            {availableDoctors.map((doctor) => (
-                                <button
-                                    key={doctor.id}
-                                    type="button"
-                                    onClick={() => onSelect(doctor.id)}
-                                    className={`w-full p-3 rounded-lg border-2 transition-all text-left no-hover-bg ${
-                                        selectedDoctor === doctor.id
-                                            ? "glass border-primary bg-primary/5"
-                                            : "glass border-border hover:border-primary/50"
-                                    }`}
-                                >
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <p className="font-semibold text-foreground">
-                                                Dr. {doctor.firstName} {doctor.lastName}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                {doctor.specialization}
-                                            </p>
-                                            <div className="flex items-center gap-1 mt-1">
-                                                <Clock className="w-3 h-3" />
-                                                <span className="text-xs text-muted-foreground">
-                          {doctor.workingHoursStart} - {doctor.workingHoursEnd}
-                        </span>
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                            <div className="space-y-1">
+                                {doctors.map((doctor) => (
+                                    <button
+                                        key={doctor.id}
+                                        type="button"
+                                        onClick={() => onSelect(doctor.id)}
+                                        className={`w-full p-3 rounded-lg border-2 transition-all text-left no-hover-bg ${
+                                            selectedDoctor === doctor.id
+                                                ? "glass border-primary bg-primary/5"
+                                                : "glass border-border hover:border-primary/50"
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <p className="font-semibold text-foreground">
+                                                    {doctor.displayName}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Specialist
+                                                </p>
                                             </div>
+                                            {selectedDoctor === doctor.id && (
+                                                <CheckCircle className="w-5 h-5 text-primary" />
+                                            )}
                                         </div>
-                                        {selectedDoctor === doctor.id && (
-                                            <CheckCircle className="w-5 h-5 text-primary" />
-                                        )}
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                                    </button>
+                                ))}
+                                {doctors.length === 0 && (
+                                    <p className="text-xs text-center py-4 text-muted-foreground italic">
+                                        No doctors available for this service.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </>
                 ) : selectedDoctor ? (
                     <button
@@ -77,11 +103,7 @@ export const DoctorSelector = memo(
                             <p className="text-xs text-muted-foreground">Doctor</p>
                             <div>
                                 <p className="font-semibold text-foreground">
-                                    Dr. {selectedDoctorData?.firstName}{" "}
-                                    {selectedDoctorData?.lastName}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {selectedDoctorData?.specialization}
+                                    {selectedDoctorData?.displayName || "Loading..."}
                                 </p>
                             </div>
                         </div>

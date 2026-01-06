@@ -27,7 +27,7 @@ export default function ProtectedRoute({
         return <Navigate to="/" replace />;
     }
 
-    const userRole = (user?.roles || "").toUpperCase();
+    const userRole = (user?.role || "").toUpperCase();
     const allowed = allowedRoles?.map(r => r.toUpperCase()) || [];
 
     if (allowedRoles && user && !allowed.includes(userRole)) {
