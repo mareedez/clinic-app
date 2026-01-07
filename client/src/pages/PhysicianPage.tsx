@@ -179,7 +179,7 @@ export function PhysicianPage() {
     }, [user, fetchDashboard]);
 
     if (!user || !checkRole(user.role, "PHYSICIAN")) return null;
-    if (isLoading && !dashboardData) return <LoadingSpinner />;
+    if (isLoading || !dashboardData) return <LoadingSpinner />;
 
     const { stats, todayAppointments, upcomingAppointments } = dashboardData!;
 
