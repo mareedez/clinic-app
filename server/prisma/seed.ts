@@ -1,7 +1,7 @@
 import 'dotenv/config';
-import { prisma } from "../../infrastructure/persistence/prisma-client.js";
+import { prisma } from "../src/infrastructure/persistence/prisma-client.js";
 import argon2 from 'argon2';
-import { UserRole } from "./enums.js";
+import { UserRole } from "../src/generated/prisma/enums.js";
 
 async function main() {
     console.log('--- Starting Database Seeding ---');

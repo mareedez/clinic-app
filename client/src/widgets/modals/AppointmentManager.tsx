@@ -5,7 +5,7 @@ import { formatTime24Hour, formatDateFull } from "../../shared/lib/time-utils";
 import { getAppointmentStatusStyles } from "../../shared/lib/statusColors";
 import { toast } from "sonner";
 import { apiClient } from "../../api/api-client";
-import type {AppointmentDTO} from "server/dist/application/dto/AppointmentDTO";
+import type { AppointmentDTO } from "../../../../server/src/application/dto/AppointmentDTO";
 
 interface AppointmentManagerProps {
     appointment: AppointmentDTO;

@@ -13,8 +13,8 @@ import { formatDateFull, formatTime24Hour } from "../shared/lib/time-utils";
 import AppointmentManager from "../widgets/modals/AppointmentManager";
 import { checkRole } from "../shared/lib/utils";
 import { apiClient } from "../api/api-client";
-import type {PatientDashboardDTO} from "server/dist/application/dto/PatientDashboardDTO";
-import type {AppointmentDTO} from "server/dist/application/dto/AppointmentDTO";
+import type { PatientDashboardDTO } from "../../../server/src/application/dto/PatientDashboardDTO";
+import type { AppointmentDTO } from "../../../server/src/application/dto/AppointmentDTO";
 import {getAppointmentStatusStyles} from "../shared/lib/statusColors";
 
 interface AppointmentCardProps {
