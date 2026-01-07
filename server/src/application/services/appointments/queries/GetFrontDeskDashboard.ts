@@ -4,6 +4,7 @@ import type { AppointmentRepository } from "../../../../ports/repositories/Appoi
 import type { UserRepository } from "../../../../ports/repositories/UserRepository.js";
 import type { FrontDeskDashboardDTO, PhysicianStatusDTO } from "../../../dto/FrontDeskDashboardDTO.js";
 import { AppointmentMapper } from "../AppointmentMapper.js";
+import { getUtcDayStart, getUtcDayEnd } from "../../../../domain/common/datetimeUtils.js";
 
 export class GetFrontDeskDashboard {
     constructor(
@@ -14,8 +15,8 @@ export class GetFrontDeskDashboard {
 
     async execute(): Promise<FrontDeskDashboardDTO> {
         const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        const start = getUtcDayStart(now);
+        const end = getUtcDayEnd(now);
 
         const [allApts, physiciansList] = await Promise.all([
             this.repo.list({ scheduledFrom: start, scheduledTo: end }),

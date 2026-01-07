@@ -36,7 +36,7 @@ const FINAL_JWT_SECRET = jwtSecret ?? "dev-insecure-secret-key";
 const app = express();
 const httpServer = createServer(app);
 const isProduction = process.env.NODE_ENV === "production";
-const port = Number(process.env.PORT ?? 4000);
+const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 4000);
 
 // Websockets
 const allowedOrigins = process.env.CORS_ORIGIN

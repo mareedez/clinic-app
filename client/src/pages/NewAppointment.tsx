@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Sun, Moon } from "lucide-react";
@@ -13,6 +12,7 @@ import { DoctorSelector } from "../features/appointments/DoctorSelector";
 import { DateTimeSelector } from "../features/appointments/DateTimeSelector";
 import { AppointmentSummary } from "../features/appointments/AppointmentSummary";
 import { apiClient } from "../api/api-client";
+import { CLINIC_CONFIG } from "../config/clinicConfig";
 import type { TimeSlotDTO } from "../../../server/src/application/dto/TimeSlotDTO";
 import type { ServiceDTO } from "../../../server/src/application/dto/ServiceDTO";
 import type { UserDTO } from "../../../server/src/application/dto/UserDTO";
@@ -100,15 +100,20 @@ export function NewAppointment() {
 
         setIsSubmitting(true);
         try {
+
             const [year, month, day] = selectedDate.split('-').map(Number);
             const [hour, minute] = selectedTime.split(':').map(Number);
-            const scheduledDate = new Date(year!, month! - 1, day!, hour!, minute!);
+            const clinicLocalDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+
+            const offsetMs = CLINIC_CONFIG.timezone.utcOffsetHours * 60 * 60 * 1000;
+            const utcDate = new Date(clinicLocalDate.getTime() - offsetMs);
+            const isoString = utcDate.toISOString();
 
             await apiClient.post("appointments", {
                 patientId: user.id,
                 physicianId: selectedDoctorId,
                 serviceType: selectedServiceId,
-                scheduledStartAt: scheduledDate.toISOString(),
+                scheduledStartAt: isoString,
                 scheduledDurationMinutes: service.durationMinutes,
                 notes: ""
             });
@@ -125,10 +130,12 @@ export function NewAppointment() {
         }
     };
 
+
     const formatLocalDate = (date: Date): string => {
-        const offset = date.getTimezoneOffset();
-        const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
-        return adjustedDate.toISOString().split('T')[0];
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
 
     const getMinDate = () => {

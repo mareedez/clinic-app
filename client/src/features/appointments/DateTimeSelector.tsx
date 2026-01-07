@@ -1,4 +1,6 @@
 import DatePickerInline from "../../widgets/calendar/DatePickerInline";
+import { formatClinicTime24Hour } from "../../shared/lib/time-utils";
+import { CLINIC_CONFIG } from "../../config/clinicConfig";
 import type { TimeSlotDTO } from "../../../../server/src/application/dto/TimeSlotDTO";
 
 interface DateTimeSelectorProps {
@@ -46,13 +48,9 @@ export function DateTimeSelector({
                             className="grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             {timeSlots.map((slot) => {
                                 const date = new Date(slot.startTime);
-                                const timeStr = date.toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    hour12: false
-                                });
+                                const timeStr = formatClinicTime24Hour(date, CLINIC_CONFIG.timezone.utcOffsetHours);
                                 const isSelected = selectedTime === timeStr;
-                                const isAvailable = slot.isAvailable; // Объявляем переменную здесь
+                                const isAvailable = slot.isAvailable;
 
                                 return (
                                     <button

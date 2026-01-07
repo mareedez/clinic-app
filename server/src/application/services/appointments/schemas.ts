@@ -1,7 +1,35 @@
 import { z } from "zod";
 import { ServiceType } from "../../../domain/clinic/ServiceEnum.js";
+import { CLINIC_CONFIG } from "../../../config/clinicConfig.js";
 
 const AppointmentIdSchema = z.string().min(1, "Appointment ID is required");
+
+
+const ClinicLocalDateSchema = z.union([z.date(), z.string()]).transform((value) => {
+    let dateStr: string;
+    if (value instanceof Date) {
+        const utcDate = value;
+        const offsetMs = CLINIC_CONFIG.timezone.utcOffsetHours * 60 * 60 * 1000;
+        const clinicDate = new Date(utcDate.getTime() + offsetMs);
+        const year = clinicDate.getUTCFullYear();
+        const month = String(clinicDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(clinicDate.getUTCDate()).padStart(2, '0');
+        dateStr = `${year}-${month}-${day}`;
+    } else {
+        dateStr = value;
+    }
+
+
+    const [year, month, day] = dateStr.split('-').map(Number);
+    if (year === undefined || month === undefined || day === undefined) {
+        throw new Error("Invalid date components");
+    }
+
+    const clinicMidnight = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+    const offsetMs = CLINIC_CONFIG.timezone.utcOffsetHours * 60 * 60 * 1000;
+    return new Date(clinicMidnight.getTime() - offsetMs);
+});
+
 const DateSchema = z.coerce.date()
 const ConcurrencySchema = z.object({
     expectedUpdatedAt: DateSchema.optional(),
@@ -39,7 +67,7 @@ export const AppointmentStatusUpdateSchema = z.object({
 
 export const GetAvailableSlotsSchema = z.object({
     physicianId: z.string().min(1),
-    date: DateSchema,
+    date: ClinicLocalDateSchema,
     serviceType: ServiceTypeSchema,
 });
 

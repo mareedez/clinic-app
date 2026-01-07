@@ -3,6 +3,7 @@ import { AppointmentStatus } from "../clinic/AppointmentStatusEnum.js";
 import { PhysicianUser } from "../users/PhysicianUser.js";
 import { CLINIC_CONFIG } from "../../config/clinicConfig.js";
 import type { Service, TimeSlot } from "../../shared/types.js";
+import { createClinicLocalDate, convertUtcToClinicLocal } from "../common/datetimeUtils.js";
 
 export class SlotGenerator {
     public static generate(
@@ -13,18 +14,20 @@ export class SlotGenerator {
     ): TimeSlot[] {
         const slots: TimeSlot[] = [];
 
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const day = date.getDate();
 
-        const dayOfWeek = new Date(year, month, day).getDay();
+        const clinicLocalDate = convertUtcToClinicLocal(date, CLINIC_CONFIG.timezone.utcOffsetHours);
+        const year = clinicLocalDate.getUTCFullYear();
+        const month = clinicLocalDate.getUTCMonth();
+        const day = clinicLocalDate.getUTCDate();
+
+        const dayOfWeek = clinicLocalDate.getUTCDay();
         if (!physician.workingDays.includes(dayOfWeek)) return [];
 
         const [startH, startM] = physician.workingHoursStart.split(":").map(Number);
         const [endH, endM] = physician.workingHoursEnd.split(":").map(Number);
 
-        const workDayStartMs = new Date(year, month, day, startH || 0, startM || 0).getTime();
-        const workDayEndMs = new Date(year, month, day, endH || 0, endM || 0).getTime();
+        const workDayStartMs = createClinicLocalDate(year, month, day, startH || 0, startM || 0, CLINIC_CONFIG.timezone.utcOffsetHours).getTime();
+        const workDayEndMs = createClinicLocalDate(year, month, day, endH || 0, endM || 0, CLINIC_CONFIG.timezone.utcOffsetHours).getTime();
 
         const activeAppts = existingAppointments.filter(apt =>
             apt.status !== AppointmentStatus.CANCELLED &&

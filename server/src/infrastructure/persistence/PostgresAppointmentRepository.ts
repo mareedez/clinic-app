@@ -4,6 +4,8 @@ import type {EntityId} from "../../domain/common/id.js";
 import { prisma } from "./prisma-client.js";
 import { AppointmentMapper } from "../../application/services/appointments/AppointmentMapper.js";
 import { AppointmentStatus } from "../../generated/prisma/enums.js";
+import { areTimestampsEqual, getClinicDayStart, getClinicDayEnd } from "../../domain/common/datetimeUtils.js";
+import { CLINIC_CONFIG } from "../../config/clinicConfig.js";
 
 export class PostgresAppointmentRepository implements AppointmentRepository {
     constructor(private readonly mapper: AppointmentMapper) {}
@@ -44,7 +46,7 @@ export class PostgresAppointmentRepository implements AppointmentRepository {
                 select: { updatedAt: true }
             });
 
-            if (current && current.updatedAt.getTime() !== opts.expectedUpdatedAt.getTime()) {
+            if (current && !areTimestampsEqual(current.updatedAt, opts.expectedUpdatedAt)) {
                 throw new Error("The appointment was updated by another user. Please refresh and try again.");
             }
         }
@@ -85,8 +87,8 @@ export class PostgresAppointmentRepository implements AppointmentRepository {
 
     async getByPhysicianAndDate(physicianId: string, date: Date): Promise<Appointment[]> {
 
-        const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
-        const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+        const startOfDay = getClinicDayStart(date, CLINIC_CONFIG.timezone.utcOffsetHours);
+        const endOfDay = getClinicDayEnd(date, CLINIC_CONFIG.timezone.utcOffsetHours);
 
         const records = await prisma.appointment.findMany({
             where: {
