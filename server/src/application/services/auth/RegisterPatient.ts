@@ -1,11 +1,15 @@
+import { PatientUser } from "../../../domain/users/PatientUser.js";
 import type { UserRepository } from "../../../ports/repositories/UserRepository.js";
 import { RegisterPatientSchema } from "./schemas.js";
 import { ValidationError } from "../appointments/errors.js";
-import { toUserDTO } from "../../../domain/users/UserMapper.js";
-import { UserRole } from "../../../domain/users/UserEnum.js";
+import { UserMapper } from "../../../domain/users/UserMapper.js";
+import argon2 from "argon2";
 
 export class RegisterPatient {
-    constructor(private readonly userRepo: UserRepository) {}
+    constructor(
+        private readonly userRepo: UserRepository,
+        private readonly userMapper: UserMapper
+    ) {}
 
     async execute(input: unknown) {
 
@@ -15,26 +19,23 @@ export class RegisterPatient {
             throw new ValidationError("A user with this email already exists.");
         }
 
-        const patient: any = {
-            id: `pat-${Math.random().toString(36).substr(2, 9)}`,
+        const passwordHash = await argon2.hash("Temporary123!");
+
+        const patientProps: any = {
             email: data.email.toLowerCase(),
+            passwordHash,
             firstName: data.firstName,
             lastName: data.lastName,
-            displayName: `${data.firstName} ${data.lastName}`,
-            role: UserRole.PATIENT,
-            phone: data.phone,
-            dateOfBirth: data.dateOfBirth,
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            // Temp
-            touch: () => {},
-            activate: () => {},
-            deactivate: () => {},
+            isActive: true
         };
+
+        if (data.phone) patientProps.phone = data.phone;
+        if (data.dateOfBirth) patientProps.dateOfBirth = data.dateOfBirth;
+
+        const patient = PatientUser.create(patientProps);
 
         await this.userRepo.save(patient);
 
-        return toUserDTO(patient);
+        return this.userMapper.toDTO(patient);
     }
 }

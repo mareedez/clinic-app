@@ -1,35 +1,38 @@
 import jwt from "jsonwebtoken";
+import argon2 from "argon2";
 import { LoginSchema } from "./schemas.js";
 import { ValidationError } from "../appointments/errors.js";
-
-const DEMO_USERS = [
-    { id: "pat-demo", email: "demo.patient@clinic.local", password: "Demo@12345", roles: ["PATIENT"] },
-    { id: "doc-demo", email: "demo.doctor@clinic.local", password: "Demo@12345", roles: ["PHYSICIAN"] },
-    { id: "fd-demo", email: "demo.desk@clinic.local", password: "Demo@12345", roles: ["FRONT_DESK"] }
-];
+import type { UserRepository } from "../../../ports/repositories/UserRepository.js";
+import { UserMapper } from "../../../domain/users/UserMapper.js";
 
 export class AuthService {
     private readonly jwtSecret: string;
 
-    constructor() {
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-            throw new Error("JWT_SECRET environment variable is required");
+    constructor(
+        private readonly userRepo: UserRepository,
+        private readonly userMapper: UserMapper,
+        jwtSecret: string | undefined
+    ) {
+        if (!jwtSecret) {
+            throw new Error("AuthService: JWT_SECRET is required but was not provided.");
         }
-        this.jwtSecret = secret;
+        this.jwtSecret = jwtSecret;
     }
+
 
     async login(input: unknown) {
         const { email, password } = LoginSchema.parse(input);
-        const user = DEMO_USERS.find(u => u.email === email && u.password === password);
-        if (!user) {
+        const user = await this.userRepo.findByEmail(email.toLowerCase());
+        if (!user || !(await argon2.verify((user as any)._passwordHash, password))) {
             throw new ValidationError("Invalid email or password");
         }
+        user.recordLogin();
+        await this.userRepo.save(user);
 
         const token = jwt.sign(
             {
                 sub: user.id,
-                roles: user.roles,
+                roles: user.role,
                 email: user.email
             },
             this.jwtSecret,
@@ -38,11 +41,7 @@ export class AuthService {
 
         return {
             token,
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.roles[0]
-            }
+            user: this.userMapper.toDTO(user)
         };
     }
 }

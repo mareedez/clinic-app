@@ -10,22 +10,35 @@ import { Server } from "socket.io";
 import { errorHandler } from "./api/middleware/errorHandler.js";
 import { authMiddleware } from "./api/middleware/auth.js";
 
-// Routes & Repos
+// Domain & Application Layers
+import { UserMapper } from "./domain/users/UserMapper.js";
+import { AppointmentMapper } from "./application/services/appointments/AppointmentMapper.js";
+
+
+// Infrastructure Layer (PostgreSQL)
+import { PostgresUserRepository } from "./infrastructure/persistence/PostgresUserRepository.js";
+import { PostgresAppointmentRepository } from "./infrastructure/persistence/PostgresAppointmentRepository.js";
+
+// Routes
 import { createAppointmentRouter } from "./api/routes/appointmentRoutes.js";
 import { createAuthRouter } from "./api/routes/authRoutes.js";
-import { InMemoryAppointmentRepository } from "./infrastructure/persistence/InMemoryAppointmentRepository.js";
-import { InMemoryUserRepository } from "./infrastructure/persistence/InMemoryUserRepository.js";
+import {AuthService} from "./application/services/auth/AuthService.js";
 
 dotenv.config();
+
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret && process.env.NODE_ENV === "production") {
+    throw new Error("FATAL: JWT_SECRET environment variable is required in production");
+}
+const FINAL_JWT_SECRET = jwtSecret ?? "dev-insecure-secret-key";
 
 //Core Init
 const app = express();
 const httpServer = createServer(app);
-
 const isProduction = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT ?? 4000);
 
-
+// Websockets
 const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
     : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4000", "http://127.0.0.1:4000"];
@@ -66,15 +79,21 @@ app.use(express.json());
 app.use(morgan(isProduction ? "combined" : "dev"));
 
 //Repositories & Routing
-const appointmentRepo = new InMemoryAppointmentRepository();
-const userRepo = new InMemoryUserRepository();
+const userMapper = new UserMapper();
+const userRepo = new PostgresUserRepository(userMapper);
+const appointmentMapper = new AppointmentMapper(userRepo);
+const appointmentRepo = new PostgresAppointmentRepository(appointmentMapper);
+const authService = new AuthService(userRepo, userMapper, FINAL_JWT_SECRET);
 
-const appointmentRouter = createAppointmentRouter(appointmentRepo, userRepo);
-const authRouter = createAuthRouter(userRepo);
+const appointmentRouter = createAppointmentRouter(appointmentRepo, userRepo, userMapper);
+const authRouter = createAuthRouter(authService, userRepo, userMapper);
+
+app.use("/api/auth", authRouter);
+app.use("/api/appointments", authMiddleware, appointmentRouter);
 
 // Base Routes
 app.get("/health", (_req, res) => {
-    res.json({ status: "ok", uptime: process.uptime() });
+    res.json({ status: "ok", uptime: process.uptime(), database: "connected" });
 });
 
 app.get("/", (_req, res) => {
@@ -115,5 +134,6 @@ httpServer.listen(port, () => {
     🚀 Server & WebSockets are running!
     📡 URL: http://localhost:${port}
     🔧 Environment: ${process.env.NODE_ENV ?? 'development'}
+    🔑 Auth: Argon2 + JWT
     `);
 });

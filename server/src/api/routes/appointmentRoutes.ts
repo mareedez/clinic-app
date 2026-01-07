@@ -18,10 +18,18 @@ import type { UserRepository } from "../../ports/repositories/UserRepository.js"
 import { SearchPatients } from "../../application/services/appointments/queries/SearchPatients.js";
 import { RegisterWalkIn } from "../../application/services/appointments/RegisterWalkIn.js";
 import { GetDailyReport } from "../../application/services/appointments/queries/GetDailyReport.js";
-import {CLINIC_CONFIG} from "../../config/clinicConfig.js";
-import {GetFrontDeskDashboard} from "../../application/services/appointments/queries/GetFrontDeskDashboard.js";
+import { CLINIC_CONFIG } from "../../config/clinicConfig.js";
+import { GetFrontDeskDashboard } from "../../application/services/appointments/queries/GetFrontDeskDashboard.js";
+import { UserMapper } from "../../domain/users/UserMapper.js";
+import { SERVICE_DISPLAY_NAMES, SERVICE_DURATION_MAP, SERVICE_PRICES } from "../../application/services/ServiceName.js";
+import { UserRole } from "../../domain/users/UserEnum.js";
+import { ServiceType } from "../../domain/clinic/ServiceEnum.js";
 
-export function createAppointmentRouter(repo: AppointmentRepository, userRepo: UserRepository) {
+export function createAppointmentRouter(
+    repo: AppointmentRepository,
+    userRepo: UserRepository,
+    userMapper: UserMapper
+) {
     const router = Router();
     const mapper = new AppointmentMapper(userRepo);
 
@@ -37,7 +45,7 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     const slotsService = new GetAvailableSlots(repo, userRepo);
     const listService = new ListAppointments(repo, mapper);
     const getByIdService = new GetAppointmentById(repo, mapper);
-    const searchPatientsService = new SearchPatients(userRepo);
+    const searchPatientsService = new SearchPatients(userRepo, userMapper);
     const registerWalkInService = new RegisterWalkIn(repo, userRepo, mapper);
     const reportService = new GetDailyReport(repo, mapper);
     const frontDeskDashboardService = new GetFrontDeskDashboard(repo, userRepo, mapper);
@@ -51,22 +59,42 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
     const notifyUpdates = (req: any, physicianId?: string, patientId?: string) => {
         const io = req.app.get("io");
         if (!io) return;
-
         io.to("front-desk").emit("dashboard-update");
-
-        if (physicianId) {
-            io.to(`physician-${physicianId}`).emit("appointment-update");
-        }
-
-        if (patientId) {
-            io.to(`patient-${patientId}`).emit("dashboard-update");
-        }
+        if (physicianId) io.to(`physician-${physicianId}`).emit("appointment-update");
+        if (patientId) io.to(`patient-${patientId}`).emit("dashboard-update");
         io.to("physicians").emit("appointment-update");
     };
+
 
     router.get("/config", async (_req, res) => {
         res.json(CLINIC_CONFIG);
     });
+
+    router.get("/services", async (_req, res) => {
+        const services = Object.entries(SERVICE_DISPLAY_NAMES).map(([id, name]) => ({
+            id,
+            name,
+            durationMinutes: SERVICE_DURATION_MAP[id as ServiceType] || 20,
+            price: SERVICE_PRICES[id as ServiceType] || 0
+        }));
+        res.json(services);
+    });
+
+    router.get("/physicians", async (_req, res, next) => {
+        try {
+            const doctors = await userRepo.listByRole(UserRole.PHYSICIAN);
+            const dtos = doctors.map(d => userMapper.toDTO(d));
+            res.json(dtos);
+        } catch (error) { next(error); }
+    });
+
+    router.get("/slots", async (req, res, next) => {
+        try {
+            const result = await slotsService.execute(req.query);
+            res.json(result);
+        } catch (error) { next(error); }
+    });
+
 
     router.get("/dashboard/patient", async (req, res, next) => {
         try {
@@ -89,16 +117,10 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
         } catch (error) { next(error); }
     });
 
+
     router.get("/patients/search", async (req, res, next) => {
         try {
             const result = await searchPatientsService.execute(req.query.q as string);
-            res.json(result);
-        } catch (error) { next(error); }
-    });
-
-    router.get("/slots", async (req, res, next) => {
-        try {
-            const result = await slotsService.execute(req.query);
             res.json(result);
         } catch (error) { next(error); }
     });
@@ -111,16 +133,17 @@ export function createAppointmentRouter(repo: AppointmentRepository, userRepo: U
         } catch (error) { next(error); }
     });
 
-    router.get("/:id", async (req, res, next) => {
-        try {
-            const result = await getByIdService.execute(req.params.id as any, getCtx(req));
-            res.json(result);
-        } catch (error) { next(error); }
-    });
 
     router.get("/", async (req: AuthenticatedRequest, res, next) => {
         try {
             const result = await listService.execute(req.query, getCtx(req));
+            res.json(result);
+        } catch (error) { next(error); }
+    });
+
+    router.get("/:id", async (req, res, next) => {
+        try {
+            const result = await getByIdService.execute(req.params.id as any, getCtx(req));
             res.json(result);
         } catch (error) { next(error); }
     });

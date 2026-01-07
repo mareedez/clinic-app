@@ -26,7 +26,7 @@ export class GetAvailableSlots {
 
         const physician = user as PhysicianUser;
         const existing = await this.repo.getByPhysicianAndDate(validated.physicianId, validated.date);
-
+        console.log("exist", existing.length)
 
         const duration = SERVICE_DURATION_MAP[validated.serviceType] || 30;
         const service: Service = {

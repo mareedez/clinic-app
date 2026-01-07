@@ -25,3 +25,16 @@ export const SERVICE_DURATION_MAP: Record<ServiceType, number> = {
     MEDICATION_REFILL: 10,
     TELEHEALTH_VISIT: 20,
 };
+
+export const SERVICE_PRICES: Record<ServiceType, number> = {
+    NEW_PATIENT_VISIT: 150,
+    FOLLOW_UP_VISIT: 75,
+    ANNUAL_PHYSICAL: 200,
+    URGENT_SAME_DAY: 120,
+    SICK_VISIT: 90,
+    VACCINATION: 40,
+    LAB_DRAW: 30,
+    PROCEDURE_MINOR: 250,
+    MEDICATION_REFILL: 25,
+    TELEHEALTH_VISIT: 65,
+};

@@ -1,12 +1,16 @@
 import { Router } from "express";
 import { AuthService } from "../../application/services/auth/AuthService.js";
 import { RegisterPatient } from "../../application/services/auth/RegisterPatient.js";
-import type {UserRepository} from "../../ports/repositories/UserRepository.js";
+import type { UserRepository } from "../../ports/repositories/UserRepository.js";
+import { UserMapper } from "../../domain/users/UserMapper.js";
 
-export function createAuthRouter(userRepo: UserRepository) {
+export function createAuthRouter(
+    authService: AuthService,
+    userRepo: UserRepository,
+    userMapper: UserMapper
+) {
     const router = Router();
-    const authService = new AuthService();
-    const registerService = new RegisterPatient(userRepo);
+    const registerService = new RegisterPatient(userRepo, userMapper);
 
     router.post("/login", async (req, res, next) => {
         try {
