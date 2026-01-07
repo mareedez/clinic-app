@@ -20,4 +20,16 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/features/auth/auth.tsx', 'src/shared/theme.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['src/features/auth/AuthContext.tsx', 'src/shared/theme.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])
