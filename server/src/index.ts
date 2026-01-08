@@ -134,11 +134,15 @@ const appointmentMapper = new AppointmentMapper(userRepo);
 const appointmentRepo = new PostgresAppointmentRepository(appointmentMapper);
 const authService = new AuthService(userRepo, userMapper, FINAL_JWT_SECRET);
 
+console.log("🚀 Creating routers...");
 const appointmentRouter = createAppointmentRouter(appointmentRepo, userRepo, userMapper);
 const authRouter = createAuthRouter(authService, userRepo, userMapper);
 
+console.log("📌 Registering routes...");
 app.use("/api/auth", authRouter);
+console.log("✅ /api/auth route registered");
 app.use("/api/appointments", authMiddleware, appointmentRouter);
+console.log("✅ /api/appointments route registered");
 
 // Base Routes
 app.get("/health", (_req, res) => {
@@ -149,9 +153,20 @@ app.get("/", (_req, res) => {
     res.status(200).send("ClinicFlow API is running with WebSockets");
 });
 
-// API Routes
-app.use("/api/auth", authRouter);
-app.use("/api/appointments", authMiddleware, appointmentRouter);
+// 404 Handler (catch-all for unmatched routes)
+app.use((req, res) => {
+    console.warn(`⚠️ 404: ${req.method} ${req.path}`, {
+        method: req.method,
+        path: req.path,
+        url: req.url
+    });
+    res.status(404).json({
+        code: "NOT_FOUND",
+        message: `Cannot ${req.method} ${req.path}`,
+        path: req.path,
+        method: req.method
+    });
+});
 
 // Error Handling
 app.use(errorHandler);
