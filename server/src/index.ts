@@ -22,7 +22,6 @@ import { PostgresAppointmentRepository } from "./infrastructure/persistence/Post
 // Routes
 import { createAppointmentRouter } from "./api/routes/appointmentRoutes.js";
 import { createAuthRouter } from "./api/routes/authRoutes.js";
-import { createAdminRouter } from "./api/routes/adminRoutes.js";
 import {AuthService} from "./application/services/auth/AuthService.js";
 
 dotenv.config();
@@ -145,15 +144,12 @@ const authService = new AuthService(userRepo, userMapper, FINAL_JWT_SECRET);
 console.log("🚀 Creating routers...");
 const appointmentRouter = createAppointmentRouter(appointmentRepo, userRepo, userMapper);
 const authRouter = createAuthRouter(authService, userRepo, userMapper);
-const adminRouter = createAdminRouter(userRepo, userMapper);
 
 console.log("📌 Registering routes...");
 app.use("/api/auth", authRouter);
 console.log("✅ /api/auth route registered");
 app.use("/api/appointments", authMiddleware, appointmentRouter);
 console.log("✅ /api/appointments route registered");
-app.use("/api/admin", adminRouter);
-console.log("✅ /api/admin route registered");
 
 // Base Routes
 app.get("/health", (_req, res) => {
