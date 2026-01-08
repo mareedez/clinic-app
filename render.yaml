@@ -4,7 +4,7 @@ services:
     runtime: node
     rootDir: server
     buildCommand: npm install && npm run build
-    startCommand: sh -c "npx prisma migrate deploy && tsx prisma/seed.ts && node dist/index.js"
+    startCommand: npm run setup && npm start
     envVars:
       - key: DATABASE_URL
         value: postgresql://neondb_owner:npg_MeO7vDU8xfWi@ep-steep-band-ahh09zhe-pooler.c-3.us-east-1.aws.neon.tech/clinic_db?sslmode=require&channel_binding=require
