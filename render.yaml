@@ -13,6 +13,6 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGIN
-        value: https://clinic-flow-app-2025.netlify.app
+        value: https://clinicflowapp.netlify.app,https://*.netlify.app
       - key: PORT
         value: "4000"

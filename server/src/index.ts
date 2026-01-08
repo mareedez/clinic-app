@@ -43,9 +43,36 @@ const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
     : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4000", "http://127.0.0.1:4000"];
 
+// CORS origin validation function to support wildcards
+const corsOriginValidator = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) {
+        callback(null, true);
+        return;
+    }
+
+    // Check exact matches
+    if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+    }
+
+    // Check wildcard patterns (e.g., *.netlify.app)
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+        if (allowedOrigin.includes("*")) {
+            const pattern = allowedOrigin.replace("*", ".*");
+            return new RegExp(`^${pattern}$`).test(origin);
+        }
+        return false;
+    });
+
+    callback(null, isAllowed);
+};
+
 const io = new Server(httpServer, {
     cors: {
-        origin: allowedOrigins,
+        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+            corsOriginValidator(origin, callback);
+        },
         methods: ["GET", "POST"],
         credentials: true
     },
@@ -58,7 +85,7 @@ app.set("io", io);
 
 // Middleware Stack
 app.use(cors({
-    origin: allowedOrigins,
+    origin: corsOriginValidator,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
