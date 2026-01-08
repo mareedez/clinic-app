@@ -22,6 +22,7 @@ import { PostgresAppointmentRepository } from "./infrastructure/persistence/Post
 // Routes
 import { createAppointmentRouter } from "./api/routes/appointmentRoutes.js";
 import { createAuthRouter } from "./api/routes/authRoutes.js";
+import { createAdminRouter } from "./api/routes/adminRoutes.js";
 import {AuthService} from "./application/services/auth/AuthService.js";
 
 dotenv.config();
@@ -40,11 +41,17 @@ const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 4000);
 
 // Websockets & CORS
 const corsOriginString = process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5174,http://localhost:4000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:4000";
-const allowedOrigins = corsOriginString.split(",").map(o => o.trim()).filter(Boolean);
+const allowAllOrigins = corsOriginString.trim() === "*";
+const allowedOrigins = allowAllOrigins ? ["*"] : corsOriginString.split(",").map(o => o.trim()).filter(Boolean);
 
 // CORS origin validation function to support wildcards
 const corsOriginValidator = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     try {
+        // Allow all origins if CORS_ORIGIN is "*"
+        if (allowAllOrigins) {
+            return callback(null, true);
+        }
+
         // Allow no origin (same-origin requests)
         if (!origin) {
             console.log(`CORS: No origin header (same-origin request)`);
@@ -104,7 +111,7 @@ app.set("io", io);
 
 // Middleware Stack
 // Log CORS configuration
-console.log(`🔐 CORS Configuration: Allowed origins: ${allowedOrigins.join(", ")}`);
+console.log(`🔐 CORS Configuration: ${allowAllOrigins ? "🚨 ALLOWING ALL ORIGINS (DEBUG MODE)" : `Allowed origins: ${allowedOrigins.join(", ")}`}`);
 
 app.use(cors({
     origin: corsOriginValidator,
@@ -138,12 +145,15 @@ const authService = new AuthService(userRepo, userMapper, FINAL_JWT_SECRET);
 console.log("🚀 Creating routers...");
 const appointmentRouter = createAppointmentRouter(appointmentRepo, userRepo, userMapper);
 const authRouter = createAuthRouter(authService, userRepo, userMapper);
+const adminRouter = createAdminRouter(userRepo, userMapper);
 
 console.log("📌 Registering routes...");
 app.use("/api/auth", authRouter);
 console.log("✅ /api/auth route registered");
 app.use("/api/appointments", authMiddleware, appointmentRouter);
 console.log("✅ /api/appointments route registered");
+app.use("/api/admin", adminRouter);
+console.log("✅ /api/admin route registered");
 
 // Base Routes
 app.get("/health", (_req, res) => {
