@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Response, NextFunction } from "express";
 import type { AppointmentRepository } from "../../ports/repositories/AppointmentRepository.js";
 import { CreateScheduledAppointment } from "../../application/services/appointments/ScheduleAppointment.js";
 import { CancelScheduledAppointment } from "../../application/services/appointments/CancelAppointment.js";
@@ -134,7 +134,7 @@ export function createAppointmentRouter(
     });
 
 
-    router.get("/", async (req: AuthenticatedRequest, res, next) => {
+    router.get("/", async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
             const result = await listService.execute(req.query, getCtx(req));
             res.json(result);

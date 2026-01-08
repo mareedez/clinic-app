@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 export interface AuthenticatedRequest extends Request {
+    headers: Record<string, any>;
+    query: Record<string, any>;
+    params: Record<string, any>;
+    body: any;
     context?: {
         userId: string;
         roles: string[];
