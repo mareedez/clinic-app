@@ -22,6 +22,7 @@ import { PostgresAppointmentRepository } from "./infrastructure/persistence/Post
 // Routes
 import { createAppointmentRouter } from "./api/routes/appointmentRoutes.js";
 import { createAuthRouter } from "./api/routes/authRoutes.js";
+import { createSeedRouter } from "./api/routes/seedRoutes.js";
 import {AuthService} from "./application/services/auth/AuthService.js";
 
 dotenv.config();
@@ -150,6 +151,9 @@ app.use("/api/auth", authRouter);
 console.log("✅ /api/auth route registered");
 app.use("/api/appointments", authMiddleware, appointmentRouter);
 console.log("✅ /api/appointments route registered");
+const seedRouter = createSeedRouter(userRepo);
+app.use("/api/seed", seedRouter);
+console.log("✅ /api/seed route registered (for demo data generation)");
 
 // Base Routes
 app.get("/health", (_req, res) => {
