@@ -38,42 +38,60 @@ const httpServer = createServer(app);
 const isProduction = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 4000);
 
-// Websockets
-const allowedOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
-    : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4000", "http://127.0.0.1:4000"];
+// Websockets & CORS
+const corsOriginString = process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:5174,http://localhost:4000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:4000";
+const allowedOrigins = corsOriginString.split(",").map(o => o.trim()).filter(Boolean);
 
 // CORS origin validation function to support wildcards
 const corsOriginValidator = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin) {
-        callback(null, true);
-        return;
-    }
-
-    // Check exact matches
-    if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-    }
-
-    // Check wildcard patterns (e.g., *.netlify.app)
-    const isAllowed = allowedOrigins.some(allowedOrigin => {
-        if (allowedOrigin.includes("*")) {
-            const pattern = allowedOrigin.replace("*", ".*");
-            return new RegExp(`^${pattern}$`).test(origin);
+    try {
+        // Allow no origin (same-origin requests)
+        if (!origin) {
+            console.log(`CORS: No origin header (same-origin request)`);
+            return callback(null, true);
         }
-        return false;
-    });
 
-    callback(null, isAllowed);
+        // Check exact matches
+        if (allowedOrigins.includes(origin)) {
+            console.log(`CORS: ✓ Allowed (exact match): ${origin}`);
+            return callback(null, true);
+        }
+
+        // Check wildcard patterns (e.g., *.netlify.app)
+        for (const allowedOrigin of allowedOrigins) {
+            if (allowedOrigin.includes("*")) {
+                // Build pattern: escape special chars, then replace * with regex pattern
+                const pattern = "^" + allowedOrigin
+                    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")  // Escape all special regex chars first
+                    .replace(/\\\*/g, "[a-zA-Z0-9-]+") + "$";  // Then replace escaped * with pattern
+
+                try {
+                    const regex = new RegExp(pattern);
+                    console.log(`CORS: Testing "${origin}" against pattern "${pattern}"`);
+                    if (regex.test(origin)) {
+                        console.log(`CORS: ✓ Allowed (wildcard match)`);
+                        return callback(null, true);
+                    }
+                } catch (regexError) {
+                    console.warn(`CORS: Invalid regex pattern "${allowedOrigin}":`, regexError);
+                }
+            }
+        }
+
+        // Not allowed
+        console.warn(`CORS: ✗ Rejected (no match): ${origin}`);
+        callback(null, false);
+    } catch (error) {
+        console.error("CORS validation error:", error);
+        // On error, reject (safer than allowing)
+        callback(null, false);
+    }
 };
 
 const io = new Server(httpServer, {
     cors: {
-        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-            corsOriginValidator(origin, callback);
-        },
-        methods: ["GET", "POST"],
+        origin: corsOriginValidator,
+        methods: ["GET", "POST", "OPTIONS"],
         credentials: true
     },
     transports: ["polling", "websocket"],
@@ -84,11 +102,15 @@ const io = new Server(httpServer, {
 app.set("io", io);
 
 // Middleware Stack
+// Log CORS configuration
+console.log(`🔐 CORS Configuration: Allowed origins: ${allowedOrigins.join(", ")}`);
+
 app.use(cors({
     origin: corsOriginValidator,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
+    credentials: true,
+    optionsSuccessStatus: 200 // For legacy browser compatibility
 }));
 
 app.use(helmet({
