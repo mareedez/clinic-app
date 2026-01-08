@@ -1,4 +1,8 @@
-import { Router, Response, NextFunction } from "express";
+import express from "express";
+
+type Response = express.Response;
+type NextFunction = express.NextFunction;
+const { Router } = express;
 import type { AppointmentRepository } from "../../ports/repositories/AppointmentRepository.js";
 import { CreateScheduledAppointment } from "../../application/services/appointments/ScheduleAppointment.js";
 import { CancelScheduledAppointment } from "../../application/services/appointments/CancelAppointment.js";

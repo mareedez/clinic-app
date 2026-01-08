@@ -1,5 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import express from "express";
 import jwt from "jsonwebtoken";
+
+type Request = express.Request;
+type Response = express.Response;
+type NextFunction = express.NextFunction;
 
 export interface AuthenticatedRequest extends Request {
     headers: Record<string, any>;

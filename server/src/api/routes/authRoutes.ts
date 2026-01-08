@@ -1,4 +1,5 @@
-import { Router } from "express";
+import express from "express";
+const { Router } = express;
 import { AuthService } from "../../application/services/auth/AuthService.js";
 import { RegisterPatient } from "../../application/services/auth/RegisterPatient.js";
 import type { UserRepository } from "../../ports/repositories/UserRepository.js";

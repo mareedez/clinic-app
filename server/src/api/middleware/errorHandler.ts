@@ -1,6 +1,10 @@
-import { Request, Response, NextFunction } from "express";
+import express from "express";
 import { ZodError } from "zod";
 import { UseCaseError } from "../../application/services/appointments/errors.js";
+
+type Request = express.Request;
+type Response = express.Response;
+type NextFunction = express.NextFunction;
 
 export function errorHandler(
     err: Error,
