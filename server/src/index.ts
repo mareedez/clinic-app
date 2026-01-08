@@ -57,23 +57,24 @@ const corsOriginValidator = (origin: string | undefined, callback: (err: Error |
             return callback(null, true);
         }
 
-        // Check wildcard patterns (e.g., *.netlify.app)
+        // Check wildcard patterns (e.g., *.netlify.app or https://*.netlify.app)
         for (const allowedOrigin of allowedOrigins) {
             if (allowedOrigin.includes("*")) {
-                // Build pattern: escape special chars, then replace * with regex pattern
-                const pattern = "^" + allowedOrigin
-                    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")  // Escape all special regex chars first
-                    .replace(/\\\*/g, "[a-zA-Z0-9-]+") + "$";  // Then replace escaped * with pattern
-
                 try {
-                    const regex = new RegExp(pattern);
-                    console.log(`CORS: Testing "${origin}" against pattern "${pattern}"`);
+                    // Escape all special regex characters except *
+                    const escapedPattern = allowedOrigin
+                        .replace(/[.+?^${}()|[\]\\]/g, "\\$&");  // Escape special chars
+
+                    // Convert * to match any characters (including hyphens)
+                    const regexPattern = "^" + escapedPattern.replace(/\*/g, ".+") + "$";
+                    const regex = new RegExp(regexPattern);
+
                     if (regex.test(origin)) {
-                        console.log(`CORS: ✓ Allowed (wildcard match)`);
+                        console.log(`CORS: ✓ Allowed (wildcard match): "${origin}" matches "${allowedOrigin}"`);
                         return callback(null, true);
                     }
                 } catch (regexError) {
-                    console.warn(`CORS: Invalid regex pattern "${allowedOrigin}":`, regexError);
+                    console.warn(`CORS: Invalid pattern "${allowedOrigin}":`, regexError);
                 }
             }
         }

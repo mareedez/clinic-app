@@ -4,7 +4,7 @@ services:
     runtime: node
     rootDir: server
     buildCommand: npm install && npm run build
-    startCommand: node dist/index.js
+    startCommand: bash start.sh
     envVars:
       - key: DATABASE_URL
         value: postgresql://neondb_owner:npg_MeO7vDU8xfWi@ep-steep-band-ahh09zhe-pooler.c-3.us-east-1.aws.neon.tech/clinic_db?sslmode=require&channel_binding=require
