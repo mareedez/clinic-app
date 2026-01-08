@@ -10,10 +10,11 @@ import { useTheme } from "../shared/theme";
 import { formatTime24Hour } from "../shared/lib/time-utils";
 import { checkRole } from "../shared/lib/utils";
 import { apiClient } from "../api/api-client";
-import { AppointmentStatus } from "../../../server/src/domain/clinic/AppointmentStatusEnum";
-import type { AppointmentDTO } from "../../../server/src/application/dto/AppointmentDTO";
-import type { PhysicianDashboardDTO } from "../../../server/src/application/dto/PhysicianDashboardDTO";
+
 import {getAppointmentStatusStyles} from "../shared/lib/statusColors";
+import type {AppointmentDTO} from "../shared/types/AppointmentDTO";
+import {AppointmentStatus} from "../shared/enums";
+import type {PhysicianDashboardDTO} from "../shared/types/PhysicianDashboardDTO";
 
 interface AppointmentRowProps {
     apt: AppointmentDTO;

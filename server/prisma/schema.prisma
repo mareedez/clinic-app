@@ -13,7 +13,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 enum UserRole {
   PATIENT
   PHYSICIAN
@@ -50,9 +49,9 @@ model User {
 }
 
 model PatientProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   phone       String?
   dateOfBirth DateTime?
@@ -63,51 +62,47 @@ model PatientProfile {
 }
 
 model PhysicianProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   specialization    String
-  workingHoursStart String   @default("09:00")
-  workingHoursEnd   String   @default("17:00")
+  workingHoursStart String @default("09:00")
+  workingHoursEnd   String @default("17:00")
   workingDays       Int[]
 
-  appointments      Appointment[] @relation("PhysicianAppointments")
+  appointments Appointment[] @relation("PhysicianAppointments")
 
   @@map("physician_profiles")
 }
 
 model Appointment {
-  id               String            @id @default(uuid())
-  status           AppointmentStatus @default(SCHEDULED)
-  serviceType      String
-  notes            String?           @db.Text
-
+  id          String            @id @default(uuid())
+  status      AppointmentStatus @default(SCHEDULED)
+  serviceType String
+  notes       String?           @db.Text
 
   scheduledStartAt DateTime
-  durationMinutes  Int               @default(30)
+  durationMinutes  Int      @default(30)
 
+  checkedInAt  DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
+  noShowAt     DateTime?
 
-  checkedInAt      DateTime?
-  startedAt        DateTime?
-  completedAt      DateTime?
-  cancelledAt      DateTime?
-  cancelReason     String?
-  noShowAt         DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
 
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  patientId String
+  patient   PatientProfile @relation("PatientAppointments", fields: [patientId], references: [id])
 
-  createdById      String
-  createdBy        User              @relation("CreatedBy", fields: [createdById], references: [id])
-
-
-  patientId        String
-  patient          PatientProfile    @relation("PatientAppointments", fields: [patientId], references: [id])
-
-  physicianId      String
-  physician        PhysicianProfile  @relation("PhysicianAppointments", fields: [physicianId], references: [id])
+  physicianId String
+  physician   PhysicianProfile @relation("PhysicianAppointments", fields: [physicianId], references: [id])
 
   @@index([physicianId, scheduledStartAt])
   @@index([patientId])

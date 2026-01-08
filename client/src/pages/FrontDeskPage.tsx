@@ -14,10 +14,10 @@ import { useTheme } from "../shared/theme";
 import { formatTime24Hour } from "../shared/lib/time-utils";
 import { checkRole } from "../shared/lib/utils";
 import { apiClient } from "../api/api-client";
-import { AppointmentStatus } from "../../../server/src/domain/clinic/AppointmentStatusEnum";
-import type { FrontDeskDashboardDTO } from "../../../server/src/application/dto/FrontDeskDashboardDTO";
-import type { UserDTO } from "../../../server/src/application/dto/UserDTO";
-import type { ClinicReportDTO } from "../../../server/src/application/dto/ClinicReportDTO";
+import { AppointmentStatus } from "../shared/types/AppointmentStatusEnum";
+import type { FrontDeskDashboardDTO } from "../shared/types/FrontDeskDashboardDTO";
+import type { UserDTO } from "../shared/types/UserDTO";
+import type { ClinicReportDTO } from "../shared/types/ClinicReportDTO";
 import {getAppointmentStatusStyles} from "../shared/lib/statusColors";
 
 export function FrontDeskPage() {

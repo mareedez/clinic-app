@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { apiClient } from "../../api/api-client";
-import type { AppointmentDTO } from "../../../../server/src/application/dto/AppointmentDTO.js";
+import type { AppointmentDTO } from "../../shared/types/AppointmentDTO";
 
 export function useAppointments() {
     const [allAppointments, setAllAppointments] = useState<AppointmentDTO[]>([]);

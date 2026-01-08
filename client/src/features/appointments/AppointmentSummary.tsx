@@ -1,8 +1,9 @@
 import { memo } from "react";
 import { User, Calendar, Clock } from "lucide-react";
 import { formatDateFull } from "../../shared/lib/time-utils";
-import type { UserDTO } from "../../../../server/src/application/dto/UserDTO";
-import type { ServiceDTO } from "../../../../server/src/application/dto/ServiceDTO";
+import type {ServiceDTO} from "../../shared/types/ServiceDTO";
+import type {UserDTO} from "../../shared/types/UserDTO";
+
 
 interface AppointmentSummaryProps {
     service: ServiceDTO | null;

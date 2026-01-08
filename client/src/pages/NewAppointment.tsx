@@ -13,9 +13,9 @@ import { DateTimeSelector } from "../features/appointments/DateTimeSelector";
 import { AppointmentSummary } from "../features/appointments/AppointmentSummary";
 import { apiClient } from "../api/api-client";
 import { CLINIC_CONFIG } from "../config/clinicConfig";
-import type { TimeSlotDTO } from "../../../server/src/application/dto/TimeSlotDTO";
-import type { ServiceDTO } from "../../../server/src/application/dto/ServiceDTO";
-import type { UserDTO } from "../../../server/src/application/dto/UserDTO";
+import type {TimeSlotDTO} from "../shared/types/TimeSlotDTO";
+import type {UserDTO} from "../shared/types/UserDTO";
+import type {ServiceDTO} from "../shared/types/ServiceDTO";
 
 export function NewAppointment() {
     const navigate = useNavigate();

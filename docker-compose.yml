@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinic_postgres
+    environment:
+      POSTGRES_USER: clinic_user
+      POSTGRES_PASSWORD: clinic_password_dev
+      POSTGRES_DB: clinic_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - clinic_network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: clinic_server
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://clinic_user:clinic_password_dev@postgres:5432/clinic_db
+      JWT_SECRET: your_jwt_secret_change_in_production
+      CORS_ORIGIN: http://localhost:5173
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+    networks:
+      - clinic_network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: clinic_client
+    restart: always
+    environment:
+      - VITE_API_URL=http://localhost:4000
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+    networks:
+      - clinic_network
+
+volumes:
+  postgres_data:
+
+networks:
+  clinic_network:
+    driver: bridge

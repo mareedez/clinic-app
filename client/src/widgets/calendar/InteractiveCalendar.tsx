@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import AppointmentManager from "../modals/AppointmentManager";
 import { formatTime24Hour } from "../../shared/lib/time-utils";
-import type { AppointmentDTO } from "../../../../server/src/application/dto/AppointmentDTO";
+import type {AppointmentDTO} from "../../shared/types/AppointmentDTO";
+
 
 interface InteractiveCalendarProps {
   appointments: AppointmentDTO[];

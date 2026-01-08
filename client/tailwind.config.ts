@@ -1,9 +1,9 @@
 import type { Config } from "tailwindcss";
-import tailwindAnimate from "tailwindcss-animate";
+import * as tailwindAnimate from "tailwindcss-animate";
 
 export default {
     darkMode: ["class"],
-    content: ["./index.html", "./src/**/*.{ts,tsx}"],
+    content: ["./index.html", "./src/**/*.{ts,tsx, js,jsx}"],
     prefix: "",
     theme: {
         container: {

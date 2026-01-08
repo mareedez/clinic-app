@@ -13,9 +13,9 @@ import { formatDateFull, formatTime24Hour } from "../shared/lib/time-utils";
 import AppointmentManager from "../widgets/modals/AppointmentManager";
 import { checkRole } from "../shared/lib/utils";
 import { apiClient } from "../api/api-client";
-import type { PatientDashboardDTO } from "../../../server/src/application/dto/PatientDashboardDTO";
-import type { AppointmentDTO } from "../../../server/src/application/dto/AppointmentDTO";
 import {getAppointmentStatusStyles} from "../shared/lib/statusColors";
+import type {PatientDashboardDTO} from "../shared/types/PatientDashboardDTO";
+import type {AppointmentDTO} from "../shared/types/AppointmentDTO";
 
 interface AppointmentCardProps {
     apt: AppointmentDTO;

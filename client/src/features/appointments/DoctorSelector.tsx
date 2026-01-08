@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from "react";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { apiClient } from "../../api/api-client";
-import type { UserDTO } from "../../../../server/src/application/dto/UserDTO";
+import type { UserDTO } from "../../shared/types/UserDTO";
 
 interface DoctorSelectorProps {
     selectedService: string;

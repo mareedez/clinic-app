@@ -1,7 +1,7 @@
 import DatePickerInline from "../../widgets/calendar/DatePickerInline";
 import { formatClinicTime24Hour } from "../../shared/lib/time-utils";
 import { CLINIC_CONFIG } from "../../config/clinicConfig";
-import type { TimeSlotDTO } from "../../../../server/src/application/dto/TimeSlotDTO";
+import type { TimeSlotDTO } from "../../shared/types/TimeSlotDTO";
 
 interface DateTimeSelectorProps {
     selectedDate: string;
