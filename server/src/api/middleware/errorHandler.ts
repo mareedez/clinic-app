@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { UseCaseError } from "../../application/services/appointments/errors.js";
 
@@ -8,7 +8,7 @@ export function errorHandler(
     res: Response,
     _next: NextFunction
 ) {
-    const requestId = (Request as any).ctx?.requestId;
+    const requestId = (_req as any).ctx?.requestId;
     const message = err.message;
     const name = err.name;
 
