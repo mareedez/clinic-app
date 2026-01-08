@@ -6,9 +6,9 @@ import type { UserRepository } from "../../ports/repositories/UserRepository.js"
 export function createSeedRouter(userRepo: UserRepository) {
     const router = express.Router();
 
-    // POST /api/seed/demo - Creates demo accounts
+    // GET or POST /api/seed/demo - Generates demo account SQL
     // Call this ONCE after deployment
-    router.post("/demo", async (req, res, next) => {
+    router.get("/demo", async (req, res, next) => {
         try {
             console.log("🌱 Seeding demo accounts...");
             const passwordHash = await argon2.hash("Demo@12345");
